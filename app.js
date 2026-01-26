@@ -1,4 +1,4 @@
-// 1. FIREBASE (Bilgilerini Yapıştır)
+// FIREBASE YAPILANDIRMASI (Bilgilerini buraya yapıştır)
 const firebaseConfig = { apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
     databaseURL: "https://istiklalmarsiyarismasi-default-rtdb.europe-west1.firebasedatabase.app/",
@@ -56,14 +56,12 @@ function joinQuiz() {
 }
 
 function listen() {
-    // Katılımcıları izle
     db.ref('rooms/' + my.room + '/users').on('value', snap => {
         const list = document.getElementById('player-list');
         list.innerHTML = "";
         snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
     });
 
-    // Merkezi komut sistemini izle
     db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
@@ -72,19 +70,14 @@ function listen() {
         document.getElementById('quiz-view').style.display = 'block';
         
         if(data.currentQ >= questions.length) return showFinal();
-
         syncUI(data.step, data.currentQ);
     });
 }
 
 function syncUI(step, qIdx) {
-    if(step === 'question') {
-        renderQuestion(qIdx);
-    } else if(step === 'reveal') {
-        showCorrectAnswer(qIdx);
-    } else if(step === 'score') {
-        renderScoreboard();
-    }
+    if(step === 'question') renderQuestion(qIdx);
+    else if(step === 'reveal') showCorrectAnswer(qIdx);
+    else if(step === 'score') renderScoreboard();
 }
 
 function renderQuestion(idx) {
@@ -115,27 +108,33 @@ function renderQuestion(idx) {
 function startTimer() {
     clearInterval(timerInt);
     timerVal = 20.0;
+    document.getElementById('timer').innerText = "20.0";
     timerInt = setInterval(() => {
         timerVal = (timerVal - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
-        if(timerVal <= 0) clearInterval(timerInt);
+        if(timerVal <= 0) {
+            clearInterval(timerInt);
+            document.getElementById('timer').innerText = "0.0";
+        }
     }, 100);
 }
 
 function select(idx, qIdx) {
-    if(my.selected !== -1) return;
+    if(my.selected !== -1) return; // Zaten seçmişse engelle
     my.selected = idx;
-    clearInterval(timerInt); // Sadece bu yarışmacı için süre durur
     
+    // KRİTİK: Sadece bu yarışmacı için süreyi durdur
+    clearInterval(timerInt); 
+    
+    // Seçeneği turuncu yap
     document.getElementById('btn-' + idx).classList.add('selected-orange');
     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
     const isCorrect = idx === questions[qIdx].c;
-    const points = isCorrect ? 5 : 0;
-    const timeUsed = isCorrect ? (20 - parseFloat(timerVal)) : 20;
+    const finalTimeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
 
-    my.score += points;
-    my.time += parseFloat(timeUsed);
+    if(isCorrect) my.score += 5;
+    my.time += parseFloat(finalTimeUsed);
 
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
         score: my.score, time: my.time, choice: idx 
@@ -143,7 +142,7 @@ function select(idx, qIdx) {
 }
 
 function showCorrectAnswer(qIdx) {
-    clearInterval(timerInt); // Sunucu bastığında herkes için süre durur
+    clearInterval(timerInt); // Sunucu bastığında herkesin süresi durur
     const correct = questions[qIdx].c;
     document.getElementById('btn-' + correct).classList.add('correct-green');
     
@@ -157,7 +156,7 @@ function renderScoreboard() {
     db.ref('rooms/' + my.room + '/users').once('value', snap => {
         const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
         u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div>${i+1}. ${x.name} - ${x.score}P</div>`).join("");
+        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
     });
 
     if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
@@ -174,3 +173,8 @@ function handleAdminAction() {
 }
 
 function startQuiz() { db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' }); }
+
+function showFinal() {
+    document.getElementById('quiz-view').style.display = 'none';
+    document.getElementById('final-view').style.display = 'block';
+}
