@@ -32,59 +32,24 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
+// ... FirebaseConfig ve Questions aynı kalsın (Sakın bozma) ...
+
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt;
 
-function joinQuiz() {
-    my.name = document.getElementById('userName').value;
-    my.room = document.getElementById('roomCode').value;
-    my.role = document.getElementById('userRole').value;
-    if(!my.name || !my.room) return alert("Eksik bilgi!");
-
-    document.getElementById('login-view').style.display = 'none';
-    document.getElementById('waiting-view').style.display = 'block';
-    
-    if(my.role === 'host') {
-        document.getElementById('host-controls').style.display = 'block';
-        document.getElementById('wait-text').style.display = 'none';
-        db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
-    } else {
-        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0, choice: -1 });
-    }
-    listen();
-}
-
-function listen() {
-    db.ref('rooms/' + my.room + '/users').on('value', snap => {
-        const list = document.getElementById('player-list');
-        list.innerHTML = "";
-        snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
-    });
-
-    db.ref('rooms/' + my.room).on('value', snap => {
-        const data = snap.val();
-        if(!data || data.currentQ < 0) return;
-        
-        document.getElementById('waiting-view').style.display = 'none';
-        document.getElementById('quiz-view').style.display = 'block';
-        
-        if(data.currentQ >= questions.length) return showFinal();
-        syncUI(data.step, data.currentQ);
-    });
-}
-
-function syncUI(step, qIdx) {
-    if(step === 'question') renderQuestion(qIdx);
-    else if(step === 'reveal') showCorrectAnswer(qIdx);
-    else if(step === 'score') renderScoreboard();
-}
+// ... joinQuiz ve listen fonksiyonları aynı kalsın ...
 
 function renderQuestion(idx) {
-    my.selected = -1;
+    // ÖNEMLİ: Her yeni soruda yerel değişkenleri ve ekranı sıfırla
+    clearInterval(timerInt); 
+    my.selected = -1; // Seçim kilidini aç
+    timerVal = 20.0; // Süreyi başa al
+    
     document.getElementById('question-content').style.display = 'block';
     document.getElementById('score-content').style.display = 'none';
     document.getElementById('q-text').innerText = questions[idx].q;
+    document.getElementById('timer').innerText = "20.0";
     
     const cont = document.getElementById('options-container');
     cont.innerHTML = "";
@@ -93,88 +58,91 @@ function renderQuestion(idx) {
         btn.className = 'option-btn';
         btn.id = 'btn-' + i;
         btn.innerText = opt;
-        if(my.role === 'competitor') btn.onclick = () => select(i, idx);
-        else btn.disabled = true;
+        
+        if(my.role === 'competitor') {
+            btn.onclick = () => select(i, idx);
+        } else {
+            btn.disabled = true;
+        }
         cont.appendChild(btn);
     });
 
     if(my.role === 'host') {
         document.getElementById('admin-area').style.display = 'block';
         document.getElementById('main-action-btn').innerText = "Cevabı Göster";
+        document.getElementById('main-action-btn').disabled = true;
     }
-    startTimer();
+    
+    // Zamanlayıcıyı başlat
+    startTimerLogic();
 }
 
-function startTimer() {
-    clearInterval(timerInt);
-    timerVal = 20.0;
-    document.getElementById('timer').innerText = "20.0";
+function startTimerLogic() {
+    clearInterval(timerInt); // Çakışmaları önlemek için temizle
     timerInt = setInterval(() => {
-        timerVal = (timerVal - 0.1).toFixed(1);
+        timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
+        
         if(timerVal <= 0) {
             clearInterval(timerInt);
             document.getElementById('timer').innerText = "0.0";
+            if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
         }
     }, 100);
 }
 
 function select(idx, qIdx) {
-    if(my.selected !== -1) return; // Zaten seçmişse engelle
-    my.selected = idx;
+    // Eğer zaten seçmişse veya süre bittiyse dokunma
+    if(my.selected !== -1 || timerVal <= 0) return; 
     
-    // KRİTİK: Sadece bu yarışmacı için süreyi durdur
+    my.selected = idx; // Kilidi vur
+    
+    // KRİTİK: Süreyi DURDUR (Sıfırlama yapmaz, o andaki timerVal kalır)
     clearInterval(timerInt); 
     
-    // Seçeneği turuncu yap
-    document.getElementById('btn-' + idx).classList.add('selected-orange');
-    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+    // Seçeneği TURUNCU yap
+    const targetBtn = document.getElementById('btn-' + idx);
+    targetBtn.classList.add('selected-orange');
+    
+    // Diğer tüm butonları hemen etkisiz hale getir
+    document.querySelectorAll('.option-btn').forEach(b => {
+        b.disabled = true;
+        b.style.cursor = "default";
+    });
 
+    // Puan ve zaman hesapla
     const isCorrect = idx === questions[qIdx].c;
     const finalTimeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
 
     if(isCorrect) my.score += 5;
     my.time += parseFloat(finalTimeUsed);
 
+    // Veritabanına yaz (Puan tablosu için)
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
-        score: my.score, time: my.time, choice: idx 
+        score: my.score, 
+        time: my.time, 
+        choice: idx 
     });
+    
+    // NOT: Ekran burada donar. Ta ki Sunucu 'reveal' komutu gönderene kadar.
 }
 
 function showCorrectAnswer(qIdx) {
-    clearInterval(timerInt); // Sunucu bastığında herkesin süresi durur
+    // Sunucu ilerlediğinde herkesin yerel sayacını her ihtimale karşı durdur
+    clearInterval(timerInt); 
+    
     const correct = questions[qIdx].c;
-    document.getElementById('btn-' + correct).classList.add('correct-green');
+    const correctBtn = document.getElementById('btn-' + correct);
     
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
-}
-
-function renderScoreboard() {
-    document.getElementById('question-content').style.display = 'none';
-    document.getElementById('score-content').style.display = 'block';
+    // Doğru cevabı YEŞİL yap
+    correctBtn.classList.add('correct-green');
     
-    db.ref('rooms/' + my.room + '/users').once('value', snap => {
-        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
-        u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
-    });
-
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+    // Yarışmacı yanlış seçtiyse onunki turuncu kalmaya devam eder (selected-orange sınıfı silinmez)
+    
+    if(my.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Puan Durumu";
+    }
 }
 
-function handleAdminAction() {
-    db.ref('rooms/' + my.room).once('value', snap => {
-        const s = snap.val().step;
-        const q = snap.val().currentQ;
-        if(s === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
-        else if(s === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
-        else if(s === 'score') db.ref('rooms/' + my.room).update({ currentQ: q + 1, step: 'question' });
-    });
-}
+// ... Diğer admin ve yardımcı fonksiyonlar aynı ...
 
-function startQuiz() { db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' }); }
-
-function showFinal() {
-    document.getElementById('quiz-view').style.display = 'none';
-    document.getElementById('final-view').style.display = 'block';
-}
