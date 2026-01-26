@@ -1,4 +1,4 @@
-// 1. SENİN FIREBASE BİLGİLERİN (Dokunma)
+// 1. FIREBASE YAPILANDIRMASI
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
@@ -9,17 +9,15 @@ const firebaseConfig = {
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 2. SORU BANKASI
+// 2. 20 SORULUK BANKA
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
     { q: "İstiklal Marşı hangi ordumuza ithaf edilmiştir?", a: ["Jandarma Kuvvetleri", "Deniz Kuvvetleri", "Kahraman Türk Ordusu", "Kuvayı Milliye"], c: 2 },
-    { q: "İstiklal Marşı'nın bestecisi kimdir?", a: ["Mehmet Âkif Ersoy", "Celal Şengör", "Osman Zeki Üngör", "Cemal Reşit Rey"], c: 2 },
+    { q: "İstiklal Marşı'nın bestecisi kimdir?", a: ["Mehmet Âkif Ersoy", "Zeki Üngör", "Osman Zeki Üngör", "Cemal Reşit Rey"], c: 2 },
     { q: "Mehmet Âkif Ersoy ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
     { q: "İstiklal Marşı toplam kaç kıtadan oluşmaktadır?", a: ["8", "9", "10", "12"], c: 2 },
     { q: "Mehmet Âkif Ersoy'un şiirlerini topladığı eserin adı nedir?", a: ["Safahat", "Çile", "Han-ı Yağma", "Kendi Gök Kubbemiz"], c: 0 },
@@ -40,9 +38,7 @@ const questions = [
 
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
-let timerInt;
-
-// TAKİP DEĞİŞKENLERİ
+let timerInt = null;
 let lastStep = "";
 let lastQIdx = -1;
 
@@ -51,7 +47,7 @@ window.joinQuiz = function() {
     my.room = document.getElementById('roomCode').value;
     my.role = document.getElementById('userRole').value;
 
-    if(!my.name || !my.room) return alert("Lütfen adınızı ve oda kodunu giriniz!");
+    if(!my.name || !my.room) return alert("Bilgileri girin!");
 
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('waiting-view').style.display = 'block';
@@ -59,27 +55,36 @@ window.joinQuiz = function() {
 
     if(my.role === 'host') {
         document.getElementById('host-controls').style.display = 'block';
-        document.getElementById('wait-text').style.display = 'none';
-        // DÜZELTME: .set yerine .update kullanarak mevcut kullanıcıları silmiyoruz
+        // DÜZELTME: update kullanarak kullanıcı listesini silmiyoruz
         db.ref('rooms/' + my.room).update({ currentQ: -1, step: 'lobby' });
     } else {
-        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0, choice: -1 });
+        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
     }
     listen();
 }
 
 function listen() {
+    // Katılımcı listesi (Lobi)
     db.ref('rooms/' + my.room + '/users').on('value', snap => {
         const list = document.getElementById('player-list');
         list.innerHTML = "";
         snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
     });
 
+    // Ana Oyun Akışı
     db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
-        
-        // EĞER ADIM VEYA SORU DEĞİŞMEDİYSE YENİLEME YAPMA (Süre sıfırlanma koruması)
+
+        // Puan durumu adımındaysak listeyi her zaman güncelle (yeni cevaplar gelebilir)
+        if(data.step === 'score') {
+            renderScore(data.users);
+            lastStep = 'score';
+            lastQIdx = data.currentQ;
+            return;
+        }
+
+        // Diğer adımlar için tekrar yüklemeyi engelle
         if (data.step === lastStep && data.currentQ === lastQIdx) return;
         lastStep = data.step;
         lastQIdx = data.currentQ;
@@ -87,19 +92,18 @@ function listen() {
         document.getElementById('waiting-view').style.display = 'none';
         document.getElementById('quiz-view').style.display = 'block';
         
-        if(data.currentQ >= questions.length) return showFinal();
+        if(data.currentQ >= questions.length) return showFinal(data.users);
         syncUI(data.step, data.currentQ);
     });
 }
 
 function syncUI(step, qIdx) {
     if(step === 'question') renderQuestion(qIdx);
-    else if(step === 'reveal') showAnswer(qIdx);
-    else if(step === 'score') renderScore();
+    else if(step === 'reveal') showReveal(qIdx);
 }
 
 function renderQuestion(idx) {
-    clearInterval(timerInt);
+    if(timerInt) clearInterval(timerInt);
     my.selected = -1;
     timerVal = 20.0;
     
@@ -110,18 +114,13 @@ function renderQuestion(idx) {
     
     const cont = document.getElementById('options-container');
     cont.innerHTML = "";
-    
     questions[idx].a.forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.id = 'btn-' + i;
         btn.innerText = opt;
-        
-        if(my.role === 'competitor') {
-            btn.onclick = () => handleSelection(i, idx);
-        } else {
-            btn.disabled = true;
-        }
+        if(my.role === 'competitor') btn.onclick = () => handleChoice(i, idx);
+        else btn.disabled = true;
         cont.appendChild(btn);
     });
 
@@ -134,7 +133,6 @@ function renderQuestion(idx) {
 }
 
 function startTimer() {
-    clearInterval(timerInt);
     timerInt = setInterval(() => {
         timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
@@ -146,80 +144,79 @@ function startTimer() {
     }, 100);
 }
 
-function handleSelection(idx, qIdx) {
+function handleChoice(idx, qIdx) {
     if(my.selected !== -1 || timerVal <= 0) return;
-    
     my.selected = idx;
     clearInterval(timerInt); // Yarışmacı için süreyi durdur
     
     document.getElementById('btn-' + idx).classList.add('selected-orange');
-    document.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
     const isCorrect = idx === questions[qIdx].c;
-    // Yanlış cevapta süreyi ceza olarak 20sn ekliyoruz, doğruysa hızı baz alıyoruz
     const timeSpent = isCorrect ? (20 - parseFloat(timerVal)) : 20.00;
     if(isCorrect) my.score += 5;
     my.time += parseFloat(timeSpent);
 
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
-        score: my.score, 
-        time: my.time,
-        choice: idx 
+        score: my.score, time: my.time, choice: idx 
     });
 }
 
-function showAnswer(qIdx) {
-    clearInterval(timerInt);
-    const correctIdx = questions[qIdx].c;
-    const correctBtn = document.getElementById('btn-' + correctIdx);
-    if(correctBtn) correctBtn.classList.add('correct-green');
+function showReveal(qIdx) {
+    if(timerInt) clearInterval(timerInt);
+    const correct = questions[qIdx].c;
+    const btn = document.getElementById('btn-' + correct);
+    if(btn) btn.classList.add('correct-green');
+    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
+}
+
+function renderScore(usersData) {
+    document.getElementById('question-content').style.display = 'none';
+    document.getElementById('score-content').style.display = 'block';
     
+    if(!usersData) return;
+    const u = [];
+    Object.keys(usersData).forEach(name => {
+        u.push({name: name, ...usersData[name]});
+    });
+
+    // Sıralama: Önce Puan (Büyük), sonra Süre (Küçük)
+    u.sort((a,b) => b.score - a.score || a.time - b.time);
+
+    document.getElementById('score-list').innerHTML = u.map((x,i) => `
+        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span>${i+1}. ${x.name}</span>
+            <span>${x.score} Puan | ${x.time.toFixed(2)} sn</span>
+        </div>`).join("");
+
     if(my.role === 'host') {
-        document.getElementById('main-action-btn').innerText = "Puan Durumu";
+        document.getElementById('main-action-btn').innerText = "Sonraki Soru";
         document.getElementById('main-action-btn').disabled = false;
     }
 }
 
-function renderScore() {
-    document.getElementById('question-content').style.display = 'none';
-    document.getElementById('score-content').style.display = 'block';
-    db.ref('rooms/' + my.room + '/users').once('value', snap => {
-        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
-        // Önce Puan (Büyükten küçüğe), sonra Süre (Küçükten büyüğe)
-        u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `
-            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #444;">
-                <span>${i+1}. ${x.name}</span>
-                <span>${x.score} P | ${x.time.toFixed(2)}s</span>
-            </div>`).join("");
-    });
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
-}
-
 window.handleAdminAction = function() {
     db.ref('rooms/' + my.room).once('value', snap => {
-        const s = snap.val().step;
-        const q = snap.val().currentQ;
-        if(s === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
-        else if(s === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
-        else if(s === 'score') db.ref('rooms/' + my.room).update({ currentQ: q + 1, step: 'question' });
+        const d = snap.val();
+        if(d.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
+        else if(d.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
+        else if(d.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: d.currentQ + 1, step: 'question' });
     });
 }
 
 window.startQuiz = function() { db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' }); }
 
-function showFinal() {
+function showFinal(usersData) {
     document.getElementById('quiz-view').style.display = 'none';
     document.getElementById('final-view').style.display = 'block';
-    // FİNAL TABLOSU: Tüm yarışmacıları puan ve süresine göre listele
-    db.ref('rooms/' + my.room + '/users').once('value', snap => {
-        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
-        u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('final-results').innerHTML = "<h3>Şampiyonlar</h3>" + u.map((x,i) => `
-            <div style="padding:15px; background:rgba(255,255,255,0.1); margin:10px 0; border-radius:10px; text-align:left;">
-                <strong>${i+1}. ${x.name}</strong><br>
-                <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
-            </div>`).join("");
-    });
+    
+    const u = [];
+    Object.keys(usersData).forEach(name => { u.push({name: name, ...usersData[name]}); });
+    u.sort((a,b) => b.score - a.score || a.time - b.time);
+    
+    document.getElementById('final-results').innerHTML = u.map((x,i) => `
+        <div style="padding:15px; background:rgba(255,255,255,0.1); margin:10px 0; border-radius:10px;">
+            <strong>${i+1}. ${x.name}</strong><br>
+            <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
+        </div>`).join("");
 }
-
