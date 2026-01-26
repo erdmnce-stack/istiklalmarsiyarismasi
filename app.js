@@ -42,11 +42,10 @@ let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt;
 
-// TAKİP DEĞİŞKENLERİ (Tekrarı önlemek için)
-let currentStep = "";
-let currentQIdx = -1;
+// TAKİP DEĞİŞKENLERİ
+let lastStep = "";
+let lastQIdx = -1;
 
-// GİRİŞ
 window.joinQuiz = function() {
     my.name = document.getElementById('userName').value;
     my.room = document.getElementById('roomCode').value;
@@ -61,7 +60,8 @@ window.joinQuiz = function() {
     if(my.role === 'host') {
         document.getElementById('host-controls').style.display = 'block';
         document.getElementById('wait-text').style.display = 'none';
-        db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
+        // DÜZELTME: .set yerine .update kullanarak mevcut kullanıcıları silmiyoruz
+        db.ref('rooms/' + my.room).update({ currentQ: -1, step: 'lobby' });
     } else {
         db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0, choice: -1 });
     }
@@ -69,29 +69,26 @@ window.joinQuiz = function() {
 }
 
 function listen() {
-    // 1. Katılımcı listesi (Bu sadece lobi için)
     db.ref('rooms/' + my.room + '/users').on('value', snap => {
         const list = document.getElementById('player-list');
         list.innerHTML = "";
         snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
     });
 
-    // 2. ANA OYUN KONTROLÜ (Sadece Sunucu Değişikliklerini Dinle)
     db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
-
-        // EĞER SORU VEYA ADIM DEĞİŞMEMİŞSE HİÇBİR ŞEY YAPMA (Kritik nokta burası)
-        if (data.step === currentStep && data.currentQ === currentQIdx) return;
-
-        currentStep = data.step;
-        currentQIdx = data.currentQ;
+        
+        // EĞER ADIM VEYA SORU DEĞİŞMEDİYSE YENİLEME YAPMA (Süre sıfırlanma koruması)
+        if (data.step === lastStep && data.currentQ === lastQIdx) return;
+        lastStep = data.step;
+        lastQIdx = data.currentQ;
 
         document.getElementById('waiting-view').style.display = 'none';
         document.getElementById('quiz-view').style.display = 'block';
         
-        if(currentQIdx >= questions.length) return showFinal();
-        syncUI(currentStep, currentQIdx);
+        if(data.currentQ >= questions.length) return showFinal();
+        syncUI(data.step, data.currentQ);
     });
 }
 
@@ -103,7 +100,7 @@ function syncUI(step, qIdx) {
 
 function renderQuestion(idx) {
     clearInterval(timerInt);
-    my.selected = -1; 
+    my.selected = -1;
     timerVal = 20.0;
     
     document.getElementById('question-content').style.display = 'block';
@@ -121,9 +118,7 @@ function renderQuestion(idx) {
         btn.innerText = opt;
         
         if(my.role === 'competitor') {
-            btn.addEventListener('click', function() {
-                handleSelection(i, idx);
-            });
+            btn.onclick = () => handleSelection(i, idx);
         } else {
             btn.disabled = true;
         }
@@ -158,17 +153,14 @@ function handleSelection(idx, qIdx) {
     clearInterval(timerInt); // Yarışmacı için süreyi durdur
     
     document.getElementById('btn-' + idx).classList.add('selected-orange');
-    
-    document.querySelectorAll('.option-btn').forEach(btn => {
-        btn.disabled = true;
-    });
+    document.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
 
     const isCorrect = idx === questions[qIdx].c;
-    const timeSpent = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
+    // Yanlış cevapta süreyi ceza olarak 20sn ekliyoruz, doğruysa hızı baz alıyoruz
+    const timeSpent = isCorrect ? (20 - parseFloat(timerVal)) : 20.00;
     if(isCorrect) my.score += 5;
     my.time += parseFloat(timeSpent);
 
-    // Veritabanına yaz (Puan tablosu için)
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
         score: my.score, 
         time: my.time,
@@ -193,8 +185,13 @@ function renderScore() {
     document.getElementById('score-content').style.display = 'block';
     db.ref('rooms/' + my.room + '/users').once('value', snap => {
         const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
+        // Önce Puan (Büyükten küçüğe), sonra Süre (Küçükten büyüğe)
         u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div>${i+1}. ${x.name} - ${x.score}P</div>`).join("");
+        document.getElementById('score-list').innerHTML = u.map((x,i) => `
+            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #444;">
+                <span>${i+1}. ${x.name}</span>
+                <span>${x.score} P | ${x.time.toFixed(2)}s</span>
+            </div>`).join("");
     });
     if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
 }
@@ -214,4 +211,14 @@ window.startQuiz = function() { db.ref('rooms/' + my.room).update({ currentQ: 0,
 function showFinal() {
     document.getElementById('quiz-view').style.display = 'none';
     document.getElementById('final-view').style.display = 'block';
+    // FİNAL TABLOSU: Tüm yarışmacıları puan ve süresine göre listele
+    db.ref('rooms/' + my.room + '/users').once('value', snap => {
+        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
+        u.sort((a,b) => b.score - a.score || a.time - b.time);
+        document.getElementById('final-results').innerHTML = "<h3>Şampiyonlar</h3>" + u.map((x,i) => `
+            <div style="padding:15px; background:rgba(255,255,255,0.1); margin:10px 0; border-radius:10px; text-align:left;">
+                <strong>${i+1}. ${x.name}</strong><br>
+                <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
+            </div>`).join("");
+    });
 }
