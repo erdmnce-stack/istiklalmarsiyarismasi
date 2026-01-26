@@ -1,10 +1,10 @@
-// 1. FIREBASE BİLGİLERİN
+// ================= FIREBASE =================
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
     databaseURL: "https://istiklalmarsiyarismasi-default-rtdb.europe-west1.firebasedatabase.app/",
     projectId: "istiklalmarsiyarismasi",
-    storageBucket: "istiklalmarsiyarismasi.firebasestorage.app",
+    storageBucket: "istiklalmarsiyarismasi.appspot.com",
     messagingSenderId: "78708182382",
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
 };
@@ -12,12 +12,13 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ================= SORULAR =================
 const questions = [
-    { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
+      { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
     { q: "İstiklal Marşı hangi ordumuza ithaf edilmiştir?", a: ["Jandarma Kuvvetleri", "Deniz Kuvvetleri", "Kahraman Türk Ordusu", "Kuvayı Milliye"], c: 2 },
     { q: "İstiklal Marşı'nın bestecisi kimdir?", a: ["Mehmet Âkif Ersoy", "Zeki Üngör", "Osman Zeki Üngör", "Cemal Reşit Rey"], c: 2 },
-    { q: "Mehmet Âkif Ersoy ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
+    { q: "Mehmet Âkif Ersoy, ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
     { q: "İstiklal Marşı toplam kaç kıtadan oluşmaktadır?", a: ["8", "9", "10", "12"], c: 2 },
     { q: "Mehmet Âkif Ersoy'un şiirlerini topladığı eserin adı nedir?", a: ["Safahat", "Çile", "Han-ı Yağma", "Kendi Gök Kubbemiz"], c: 0 },
     { q: "İstiklal Marşı yarışmasına toplam kaç şiir katılmıştır?", a: ["524", "724", "100", "124"], c: 1 },
@@ -25,7 +26,7 @@ const questions = [
     { q: "İstiklal Marşı mecliste ilk kez kim tarafından okunmuştur?", a: ["Mustafa Kemal Atatürk", "Hamdullah Suphi Tanrıöver", "İsmet İnönü", "Kazım Karabekir"], c: 1 },
     { q: "Mehmet Âkif Ersoy aslen nerelidir (Babası)?", a: ["İstanbul", "Ankara", "Arnavutluk (İpek)", "Burdur"], c: 2 },
     { q: "Mehmet Âkif Ersoy'un asıl mesleği nedir?", a: ["Öğretmen", "Asker", "Veteriner Hekim", "Mühendis"], c: 2 },
-    { q: "İstiklal Marşı'nın kabul edildiği dönemde Maarif Vekili kimdir?", a: ["Hamdullah Suphi Tanrıöver", "Reşit Galip", "Hasan Ali Yücel", "Tevfik İleri"], c: 0 },
+    { q: "İstiklal Marşı'nın kabul edildiği dönemde Milli Eğitim Bakanı (Maarif Vekili) kimdir?", a: ["Hamdullah Suphi Tanrıöver", "Reşit Galip", "Hasan Ali Yücel", "Tevfik İleri"], c: 0 },
     { q: "Mehmet Âkif Ersoy hangi ilin milletvekilliğini yapmıştır?", a: ["İstanbul", "Ankara", "Burdur", "Çanakkale"], c: 2 },
     { q: "Korkma, sönmez bu şafaklarda yüzen al sancak; / Sönmeden yurdumun üstünde tüten en son ...?", a: ["Ocak", "Bayrak", "Yıldız", "Şafak"], c: 0 },
     { q: "Mehmet Âkif Ersoy ne zaman vefat etmiştir?", a: ["27 Aralık 1936", "10 Kasım 1938", "12 Mart 1921", "29 Ekim 1923"], c: 0 },
@@ -35,171 +36,185 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
-let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
-let timerVal = 20.0;
-let timerInt = null;
+// ================= GLOBAL STATE =================
+let my = { name: "", role: "", room: "", score: 0, time: 0, answered: false };
+let timer = 20.0;
+let interval = null;
+let localStep = "";
+let localQ = -1;
 
-// EKRAN TAKİBİ İÇİN KRİTİK DEĞİŞKENLER
-let lastProcessedStep = "";
-let lastProcessedQ = -1;
+// ================= JOIN =================
+window.joinQuiz = async function () {
+    my.name = userName.value.trim();
+    my.room = roomCode.value.trim();
+    my.role = userRole.value;
 
-window.joinQuiz = function() {
-    my.name = document.getElementById('userName').value;
-    my.room = document.getElementById('roomCode').value;
-    my.role = document.getElementById('userRole').value;
+    if (!my.name || !my.room) return alert("Bilgileri giriniz");
 
-    if(!my.name || !my.room) return alert("Bilgileri girin!");
+    const roomRef = db.ref("rooms/" + my.room);
+    const snap = await roomRef.once("value");
 
-    document.getElementById('login-view').style.display = 'none';
-    document.getElementById('waiting-view').style.display = 'block';
-    document.getElementById('room-display').innerText = "Oda: " + my.room;
-
-    if(my.role === 'host') {
-        document.getElementById('host-controls').style.display = 'block';
-        db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
-    } else {
-        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
+    if (snap.exists() && snap.val().started && my.role === "competitor") {
+        alert("Yarışma başlamıştır");
+        return;
     }
-    listen();
-}
 
-function listen() {
-    db.ref('rooms/' + my.room + '/users').on('value', snap => {
-        const list = document.getElementById('player-list');
-        list.innerHTML = "";
-        snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
-    });
+    login-view.style.display = "none";
+    waiting-view.style.display = "block";
+    room-display.innerText = "Oda: " + my.room;
 
-    db.ref('rooms/' + my.room).on('value', snap => {
+    if (my.role === "host") {
+        await roomRef.set({
+            started: false,
+            currentQ: -1,
+            step: "lobby"
+        });
+        host-controls.style.display = "block";
+    } else {
+        await roomRef.child("users/" + my.name).set({
+            score: 0,
+            time: 20,
+            answered: false
+        });
+    }
+
+    listenRoom();
+};
+
+// ================= LISTEN =================
+function listenRoom() {
+    db.ref("rooms/" + my.room).on("value", snap => {
+        if (!snap.exists()) return;
         const data = snap.val();
-        if(!data || data.currentQ < 0) return;
 
-        // ÖNEMLİ: Sadece Soru No veya Aşama değişmişse ekranı yenile!
-        if(data.step !== lastProcessedStep || data.currentQ !== lastProcessedQ) {
-            lastProcessedStep = data.step;
-            lastProcessedQ = data.currentQ;
-            syncUI(data.step, data.currentQ);
+        if (data.currentQ !== localQ || data.step !== localStep) {
+            localQ = data.currentQ;
+            localStep = data.step;
+            syncUI(data);
         }
     });
+
+    db.ref("rooms/" + my.room + "/users").on("value", snap => {
+        player-list.innerHTML = "";
+        snap.forEach(u => {
+            player-list.innerHTML += `<div>${u.key}</div>`;
+        });
+    });
 }
 
-function syncUI(step, qIdx) {
-    document.getElementById('waiting-view').style.display = 'none';
-    document.getElementById('quiz-view').style.display = 'block';
+// ================= UI SYNC =================
+function syncUI(data) {
+    waiting-view.style.display = "none";
+    quiz-view.style.display = "block";
 
-    if(qIdx >= questions.length) return showFinal();
+    if (data.currentQ >= questions.length) return showFinal();
 
-    if(step === 'question') {
-        renderQuestion(qIdx);
-    } else if(step === 'reveal') {
-        showReveal(qIdx);
-    } else if(step === 'score') {
-        renderScore();
-    }
+    if (data.step === "question") renderQuestion(data.currentQ);
+    if (data.step === "reveal") revealAnswer(data.currentQ);
+    if (data.step === "score") showScores();
 }
 
-function renderQuestion(idx) {
-    clearInterval(timerInt);
-    my.selected = -1;
-    timerVal = 20.0;
-    
-    document.getElementById('question-content').style.display = 'block';
-    document.getElementById('score-content').style.display = 'none';
-    document.getElementById('q-text').innerText = (idx + 1) + ". " + questions[idx].q;
-    document.getElementById('timer').innerText = "20.0";
-    
-    const cont = document.getElementById('options-container');
-    cont.innerHTML = "";
-    questions[idx].a.forEach((opt, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.id = 'btn-' + i;
+// ================= QUESTION =================
+function renderQuestion(i) {
+    my.answered = false;
+    timer = 20.0;
+    timerEl.innerText = "20.0";
+
+    q-text.innerText = `${i + 1}. ${questions[i].q}`;
+    options-container.innerHTML = "";
+
+    questions[i].a.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
         btn.innerText = opt;
-        if(my.role === 'competitor') btn.onclick = () => selectChoice(i, idx);
-        else btn.disabled = true;
-        cont.appendChild(btn);
+        if (my.role === "competitor") btn.onclick = () => answer(idx, i);
+        options-container.appendChild(btn);
     });
 
-    if(my.role === 'host') {
-        document.getElementById('admin-area').style.display = 'block';
-        document.getElementById('main-action-btn').innerText = "Cevabı Göster";
-        document.getElementById('main-action-btn').disabled = true;
+    if (my.role === "host") {
+        admin-area.style.display = "block";
+        main-action-btn.innerText = "Cevabı Göster";
+        main-action-btn.disabled = true;
     }
-    
-    startLocalTimer();
+
+    startTimer();
 }
 
-function startLocalTimer() {
-    timerInt = setInterval(() => {
-        timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
-        document.getElementById('timer').innerText = timerVal;
-        
-        if(timerVal <= 0) {
-            clearInterval(timerInt);
-            document.getElementById('timer').innerText = "0.0";
-            if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
-            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+// ================= TIMER =================
+function startTimer() {
+    clearInterval(interval);
+    interval = setInterval(() => {
+        timer = (timer - 0.1).toFixed(1);
+        timerEl.innerText = timer;
+        if (timer <= 0) {
+            clearInterval(interval);
+            if (my.role === "host") main-action-btn.disabled = false;
         }
     }, 100);
 }
 
-function selectChoice(idx, qIdx) {
-    if(my.selected !== -1 || timerVal <= 0) return;
-    
-    my.selected = idx;
-    clearInterval(timerInt); // Sadece tıklayan yarışmacının saati durur
-    
-    document.getElementById('btn-' + idx).classList.add('selected-orange');
-    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+// ================= ANSWER =================
+function answer(choice, qIdx) {
+    if (my.answered) return;
+    my.answered = true;
+    clearInterval(interval);
 
-    const isCorrect = idx === questions[qIdx].c;
-    const timeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
-    
-    if(isCorrect) my.score += 5;
-    my.time += parseFloat(timeUsed);
+    const correct = choice === questions[qIdx].c;
+    if (correct) my.score += 5;
+    my.time += correct ? (20 - timer) : 20;
 
-    // Bu güncelleme artık renderQuestion'ı tetiklemeyecek!
-    db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
-        score: my.score, time: my.time, choice: idx 
+    db.ref(`rooms/${my.room}/users/${my.name}`).update({
+        score: my.score,
+        time: my.time,
+        answered: true,
+        choice
     });
 }
 
-function showReveal(qIdx) {
-    if(timerInt) clearInterval(timerInt);
-    const correct = questions[qIdx].c;
-    const btn = document.getElementById('btn-' + correct);
-    if(btn) btn.classList.add('correct-green');
-    
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
+// ================= REVEAL =================
+function revealAnswer(i) {
+    const correct = questions[i].c;
+    document.querySelectorAll(".option-btn")[correct]?.classList.add("correct-green");
+    if (my.role === "host") main-action-btn.innerText = "Puan Durumu";
 }
 
-function renderScore() {
-    document.getElementById('question-content').style.display = 'none';
-    document.getElementById('score-content').style.display = 'block';
-    
-    db.ref('rooms/' + my.room + '/users').once('value', snap => {
-        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
-        u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
+// ================= SCORE =================
+function showScores() {
+    question-content.style.display = "none";
+    score-content.style.display = "block";
+
+    db.ref(`rooms/${my.room}/users`).once("value", snap => {
+        const arr = [];
+        snap.forEach(u => arr.push({ name: u.key, ...u.val() }));
+        arr.sort((a, b) => b.score - a.score || a.time - b.time);
+        score-list.innerHTML = arr.map((u, i) =>
+            `<div>${i + 1}. ${u.name} - ${u.score} P</div>`
+        ).join("");
     });
-    
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+
+    if (my.role === "host") main-action-btn.innerText = "Sonraki Soru";
 }
 
-window.handleAdminAction = function() {
-    db.ref('rooms/' + my.room).once('value', snap => {
+// ================= ADMIN =================
+window.handleAdminAction = function () {
+    db.ref("rooms/" + my.room).once("value", snap => {
         const d = snap.val();
-        if(d.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
-        else if(d.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
-        else if(d.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: d.currentQ + 1, step: 'question' });
+        if (d.step === "question") db.ref("rooms/" + my.room).update({ step: "reveal" });
+        else if (d.step === "reveal") db.ref("rooms/" + my.room).update({ step: "score" });
+        else db.ref("rooms/" + my.room).update({ currentQ: d.currentQ + 1, step: "question" });
     });
-}
+};
 
-window.startQuiz = function() {
-    db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' });
-}
+window.startQuiz = function () {
+    db.ref("rooms/" + my.room).update({
+        started: true,
+        currentQ: 0,
+        step: "question"
+    });
+};
 
+// ================= FINAL =================
 function showFinal() {
-    document.getElementById('quiz-view').style.display = 'none';
-    document.getElementById('final-view').style.display = 'block';
+    quiz-view.style.display = "none";
+    final-view.style.display = "block";
 }
