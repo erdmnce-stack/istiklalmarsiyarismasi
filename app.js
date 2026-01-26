@@ -1,6 +1,4 @@
-/**********************
- * FIREBASE CONFIG
- **********************/
+// 1. FIREBASE BİLGİLERİN
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
@@ -14,35 +12,12 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/**********************
- * DOM ELEMENTS
- **********************/
-const loginView = document.getElementById("login-view");
-const waitingView = document.getElementById("waiting-view");
-const quizView = document.getElementById("quiz-view");
-const finalView = document.getElementById("final-view");
-
-const roomDisplay = document.getElementById("room-display");
-const hostControls = document.getElementById("host-controls");
-const waitText = document.getElementById("wait-text");
-
-const questionContent = document.getElementById("question-content");
-const scoreContent = document.getElementById("score-content");
-
-const qText = document.getElementById("q-text");
-const timerEl = document.getElementById("timer");
-const optionsContainer = document.getElementById("options-container");
-const scoreList = document.getElementById("score-list");
-
-/**********************
- * QUESTIONS
- **********************/
 const questions = [
-     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
+    { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
     { q: "İstiklal Marşı hangi ordumuza ithaf edilmiştir?", a: ["Jandarma Kuvvetleri", "Deniz Kuvvetleri", "Kahraman Türk Ordusu", "Kuvayı Milliye"], c: 2 },
     { q: "İstiklal Marşı'nın bestecisi kimdir?", a: ["Mehmet Âkif Ersoy", "Zeki Üngör", "Osman Zeki Üngör", "Cemal Reşit Rey"], c: 2 },
-    { q: "Mehmet Âkif Ersoy, ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
+    { q: "Mehmet Âkif Ersoy ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
     { q: "İstiklal Marşı toplam kaç kıtadan oluşmaktadır?", a: ["8", "9", "10", "12"], c: 2 },
     { q: "Mehmet Âkif Ersoy'un şiirlerini topladığı eserin adı nedir?", a: ["Safahat", "Çile", "Han-ı Yağma", "Kendi Gök Kubbemiz"], c: 0 },
     { q: "İstiklal Marşı yarışmasına toplam kaç şiir katılmıştır?", a: ["524", "724", "100", "124"], c: 1 },
@@ -50,7 +25,7 @@ const questions = [
     { q: "İstiklal Marşı mecliste ilk kez kim tarafından okunmuştur?", a: ["Mustafa Kemal Atatürk", "Hamdullah Suphi Tanrıöver", "İsmet İnönü", "Kazım Karabekir"], c: 1 },
     { q: "Mehmet Âkif Ersoy aslen nerelidir (Babası)?", a: ["İstanbul", "Ankara", "Arnavutluk (İpek)", "Burdur"], c: 2 },
     { q: "Mehmet Âkif Ersoy'un asıl mesleği nedir?", a: ["Öğretmen", "Asker", "Veteriner Hekim", "Mühendis"], c: 2 },
-    { q: "İstiklal Marşı'nın kabul edildiği dönemde Milli Eğitim Bakanı (Maarif Vekili) kimdir?", a: ["Hamdullah Suphi Tanrıöver", "Reşit Galip", "Hasan Ali Yücel", "Tevfik İleri"], c: 0 },
+    { q: "İstiklal Marşı'nın kabul edildiği dönemde Maarif Vekili kimdir?", a: ["Hamdullah Suphi Tanrıöver", "Reşit Galip", "Hasan Ali Yücel", "Tevfik İleri"], c: 0 },
     { q: "Mehmet Âkif Ersoy hangi ilin milletvekilliğini yapmıştır?", a: ["İstanbul", "Ankara", "Burdur", "Çanakkale"], c: 2 },
     { q: "Korkma, sönmez bu şafaklarda yüzen al sancak; / Sönmeden yurdumun üstünde tüten en son ...?", a: ["Ocak", "Bayrak", "Yıldız", "Şafak"], c: 0 },
     { q: "Mehmet Âkif Ersoy ne zaman vefat etmiştir?", a: ["27 Aralık 1936", "10 Kasım 1938", "12 Mart 1921", "29 Ekim 1923"], c: 0 },
@@ -60,205 +35,171 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
-/**********************
- * STATE
- **********************/
-let my = { name:"", role:"", room:"", score:0, time:0, answered:false };
+let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt = null;
-let currentQ = -1;
-let currentStep = "";
 
-/**********************
- * JOIN
- **********************/
-window.joinQuiz = function () {
-    my.name = document.getElementById("userName").value.trim();
-    my.room = document.getElementById("roomCode").value.trim();
-    my.role = document.getElementById("userRole").value;
+// EKRAN TAKİBİ İÇİN KRİTİK DEĞİŞKENLER
+let lastProcessedStep = "";
+let lastProcessedQ = -1;
 
-    if (!my.name || !my.room) {
-        alert("Bilgileri eksiksiz girin");
-        return;
-    }
+window.joinQuiz = function() {
+    my.name = document.getElementById('userName').value;
+    my.room = document.getElementById('roomCode').value;
+    my.role = document.getElementById('userRole').value;
 
-    loginView.style.display = "none";
-    waitingView.style.display = "block";
-    roomDisplay.innerText = "Oda: " + my.room;
+    if(!my.name || !my.room) return alert("Bilgileri girin!");
 
-    if (my.role === "host") {
-        hostControls.style.display = "block";
-        waitText.style.display = "none";
-        db.ref("rooms/" + my.room).set({ currentQ: -1, step: "lobby" });
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('waiting-view').style.display = 'block';
+    document.getElementById('room-display').innerText = "Oda: " + my.room;
+
+    if(my.role === 'host') {
+        document.getElementById('host-controls').style.display = 'block';
+        db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
     } else {
-        db.ref(`rooms/${my.room}/users/${my.name}`).set({
-            score: 0,
-            time: 0
-        });
+        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
     }
+    listen();
+}
 
-    listenRoom();
-};
+function listen() {
+    db.ref('rooms/' + my.room + '/users').on('value', snap => {
+        const list = document.getElementById('player-list');
+        list.innerHTML = "";
+        snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
+    });
 
-/**********************
- * LISTEN ROOM
- **********************/
-function listenRoom() {
-    db.ref(`rooms/${my.room}`).on("value", snap => {
+    db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
-        if (!data || data.currentQ < 0) return;
+        if(!data || data.currentQ < 0) return;
 
-        if (data.currentQ !== currentQ || data.step !== currentStep) {
-            currentQ = data.currentQ;
-            currentStep = data.step;
-            syncUI();
+        // ÖNEMLİ: Sadece Soru No veya Aşama değişmişse ekranı yenile!
+        if(data.step !== lastProcessedStep || data.currentQ !== lastProcessedQ) {
+            lastProcessedStep = data.step;
+            lastProcessedQ = data.currentQ;
+            syncUI(data.step, data.currentQ);
         }
     });
 }
 
-/**********************
- * SYNC UI
- **********************/
-function syncUI() {
-    waitingView.style.display = "none";
-    quizView.style.display = "block";
+function syncUI(step, qIdx) {
+    document.getElementById('waiting-view').style.display = 'none';
+    document.getElementById('quiz-view').style.display = 'block';
 
-    if (currentQ >= questions.length) {
-        showFinal();
-        return;
+    if(qIdx >= questions.length) return showFinal();
+
+    if(step === 'question') {
+        renderQuestion(qIdx);
+    } else if(step === 'reveal') {
+        showReveal(qIdx);
+    } else if(step === 'score') {
+        renderScore();
     }
-
-    if (currentStep === "question") renderQuestion();
-    if (currentStep === "reveal") showReveal();
-    if (currentStep === "score") renderScore();
 }
 
-/**********************
- * QUESTION
- **********************/
-function renderQuestion() {
+function renderQuestion(idx) {
     clearInterval(timerInt);
-
+    my.selected = -1;
     timerVal = 20.0;
-    my.answered = false;
-
-    questionContent.style.display = "block";
-    scoreContent.style.display = "none";
-
-    qText.innerText = questions[currentQ].q;
-    timerEl.innerText = "20.0";
-
-    optionsContainer.innerHTML = "";
-    questions[currentQ].a.forEach((text, i) => {
-        const btn = document.createElement("button");
-        btn.className = "option-btn";
-        btn.innerText = text;
-
-        if (my.role === "competitor") {
-            btn.onclick = () => chooseAnswer(i, btn);
-        } else {
-            btn.disabled = true;
-        }
-
-        optionsContainer.appendChild(btn);
+    
+    document.getElementById('question-content').style.display = 'block';
+    document.getElementById('score-content').style.display = 'none';
+    document.getElementById('q-text').innerText = (idx + 1) + ". " + questions[idx].q;
+    document.getElementById('timer').innerText = "20.0";
+    
+    const cont = document.getElementById('options-container');
+    cont.innerHTML = "";
+    questions[idx].a.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.id = 'btn-' + i;
+        btn.innerText = opt;
+        if(my.role === 'competitor') btn.onclick = () => selectChoice(i, idx);
+        else btn.disabled = true;
+        cont.appendChild(btn);
     });
 
-    startTimer();
+    if(my.role === 'host') {
+        document.getElementById('admin-area').style.display = 'block';
+        document.getElementById('main-action-btn').innerText = "Cevabı Göster";
+        document.getElementById('main-action-btn').disabled = true;
+    }
+    
+    startLocalTimer();
 }
 
-/**********************
- * TIMER (LOCAL)
- **********************/
-function startTimer() {
+function startLocalTimer() {
     timerInt = setInterval(() => {
-        timerVal = Math.max(0, timerVal - 0.1).toFixed(1);
-        timerEl.innerText = timerVal;
-
-        if (timerVal <= 0) {
+        timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
+        document.getElementById('timer').innerText = timerVal;
+        
+        if(timerVal <= 0) {
             clearInterval(timerInt);
-            disableOptions();
+            document.getElementById('timer').innerText = "0.0";
+            if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
+            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
         }
     }, 100);
 }
 
-/**********************
- * ANSWER
- **********************/
-function chooseAnswer(index, btn) {
-    if (my.answered) return;
+function selectChoice(idx, qIdx) {
+    if(my.selected !== -1 || timerVal <= 0) return;
+    
+    my.selected = idx;
+    clearInterval(timerInt); // Sadece tıklayan yarışmacının saati durur
+    
+    document.getElementById('btn-' + idx).classList.add('selected-orange');
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
-    my.answered = true;
-    clearInterval(timerInt);
+    const isCorrect = idx === questions[qIdx].c;
+    const timeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
+    
+    if(isCorrect) my.score += 5;
+    my.time += parseFloat(timeUsed);
 
-    btn.classList.add("selected-orange");
-    disableOptions();
-
-    const correct = index === questions[currentQ].c;
-    if (correct) my.score += 5;
-    my.time += correct ? (20 - timerVal) : 20;
-
-    db.ref(`rooms/${my.room}/users/${my.name}`).update({
-        score: my.score,
-        time: my.time
+    // Bu güncelleme artık renderQuestion'ı tetiklemeyecek!
+    db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
+        score: my.score, time: my.time, choice: idx 
     });
 }
 
-/**********************
- * REVEAL
- **********************/
-function showReveal() {
-    clearInterval(timerInt);
-    const correctIdx = questions[currentQ].c;
-    const btn = optionsContainer.children[correctIdx];
-    if (btn) btn.classList.add("correct-green");
+function showReveal(qIdx) {
+    if(timerInt) clearInterval(timerInt);
+    const correct = questions[qIdx].c;
+    const btn = document.getElementById('btn-' + correct);
+    if(btn) btn.classList.add('correct-green');
+    
+    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
 }
 
-/**********************
- * SCORE
- **********************/
 function renderScore() {
-    questionContent.style.display = "none";
-    scoreContent.style.display = "block";
+    document.getElementById('question-content').style.display = 'none';
+    document.getElementById('score-content').style.display = 'block';
+    
+    db.ref('rooms/' + my.room + '/users').once('value', snap => {
+        const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
+        u.sort((a,b) => b.score - a.score || a.time - b.time);
+        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
+    });
+    
+    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+}
 
-    db.ref(`rooms/${my.room}/users`).once("value", snap => {
-        const users = [];
-        snap.forEach(x => users.push({ name: x.key, ...x.val() }));
-        users.sort((a, b) => b.score - a.score || a.time - b.time);
-
-        scoreList.innerHTML = users.map((u, i) =>
-            `<div class="score-row">${i + 1}. ${u.name} - ${u.score} P</div>`
-        ).join("");
+window.handleAdminAction = function() {
+    db.ref('rooms/' + my.room).once('value', snap => {
+        const d = snap.val();
+        if(d.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
+        else if(d.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
+        else if(d.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: d.currentQ + 1, step: 'question' });
     });
 }
 
-/**********************
- * ADMIN
- **********************/
-window.handleAdminAction = function () {
-    const ref = db.ref(`rooms/${my.room}`);
-    ref.once("value", snap => {
-        const d = snap.val();
-        if (d.step === "question") ref.update({ step: "reveal" });
-        else if (d.step === "reveal") ref.update({ step: "score" });
-        else ref.update({ currentQ: d.currentQ + 1, step: "question" });
-    });
-};
-
-window.startQuiz = function () {
-    db.ref(`rooms/${my.room}`).update({
-        currentQ: 0,
-        step: "question"
-    });
-};
-
-/**********************
- * UTILS
- **********************/
-function disableOptions() {
-    document.querySelectorAll(".option-btn").forEach(b => b.disabled = true);
+window.startQuiz = function() {
+    db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' });
 }
 
 function showFinal() {
-    quizView.style.display = "none";
-    finalView.style.display = "block";
+    document.getElementById('quiz-view').style.display = 'none';
+    document.getElementById('final-view').style.display = 'block';
 }
