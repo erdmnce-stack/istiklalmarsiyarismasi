@@ -7,11 +7,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div id="app" class="glass-panel">
         <div id="login-view">
             <h1>12 Mart İstiklal Marşı'nın Kabulü</h1>
-            <p>Bilgi Yarışması Girişi</p>
             <div class="input-group">
                 <input type="text" id="userName" placeholder="Ad Soyad">
                 <input type="text" id="roomCode" placeholder="Yarışma Kodu">
@@ -30,15 +28,15 @@
                 <ul id="player-list"></ul>
             </div>
             <div id="host-start-area" style="display: none;">
-                <button class="action-btn" onclick="startQuizNow()" style="background: #27ae60;">Yarışmayı Başlat</button>
+                <button class="action-btn start-btn" onclick="startQuizNow()">Yarışmayı Başlat</button>
             </div>
-            <p id="wait-msg">Sunucunun yarışmayı başlatması bekleniyor...</p>
+            <p id="wait-msg">Sunucunun başlatması bekleniyor...</p>
         </div>
 
         <div id="quiz-view" style="display: none;">
             <div id="question-area">
                 <div class="quiz-header">
-                    <div id="timer">20</div>
+                    <div id="timer">20.0</div>
                     <div id="question-count">Soru: 1/20</div>
                 </div>
                 <h2 id="question-text">Soru yükleniyor...</h2>
@@ -51,7 +49,9 @@
             </div>
 
             <div id="admin-controls" style="display: none; margin-top: 20px;">
-                <button id="next-btn" class="action-btn" onclick="nextQuestion()" disabled>Sonraki Soru</button>
+                <button id="show-answer-btn" class="action-btn" onclick="triggerShowAnswer()" disabled>Doğru Cevabı Göster</button>
+                <button id="show-score-btn" class="action-btn" onclick="triggerShowScore()" style="display:none; background:#f39c12;">Puan Durumunu Göster</button>
+                <button id="next-btn" class="action-btn" onclick="nextQuestion()" style="display:none; background:#27ae60;">Sonraki Soruya Geç</button>
             </div>
         </div>
 
