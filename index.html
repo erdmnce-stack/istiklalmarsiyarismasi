@@ -22,14 +22,29 @@
             <button class="action-btn" onclick="joinQuiz()">Yarışmaya Giriş Yap</button>
         </div>
 
-        <div id="waiting-view" style="display: none;">
-            <h2 id="room-display">Oda: -</h2>
-            <div id="player-list" style="margin: 20px 0; text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;"></div>
-            <div id="host-controls" style="display: none;">
-                <button class="action-btn" onclick="startQuiz()" style="background: #27ae60;">Yarışmayı Başlat</button>
-            </div>
-            <p id="wait-text">Sunucunun başlatması bekleniyor...</p>
-        </div>
+       <div id="waiting-view" style="display: none;">
+    <h2 id="room-display" style="margin-bottom: 20px;">Oda: -</h2>
+    
+    <div class="rules-box">
+        <h3>Yarışma Kuralları</h3>
+        <ul>
+            <li>⏱ Soru süresi: <strong>20 Saniye</strong></li>
+            <li>✅ Her doğru cevap: <strong>5 Puan</strong></li>
+            <li>🚀 Puan eşitliğinde <strong>hızlı olan</strong> üstte yer alır.</li>
+            <li>🟠 İşaretleme yapınca <strong>süreniz durur</strong> ve seçim kilitlenir.</li>
+        </ul>
+    </div>
+
+    <div class="lobby-box">
+        <h3>Katılımcılar</h3>
+        <ul id="player-list" class="lobby-list"></ul>
+    </div>
+    
+    <div id="host-controls" style="display: none; margin-top: 20px;">
+        <button class="action-btn" onclick="startQuiz()" style="background: #27ae60;">Yarışmayı Başlat</button>
+    </div>
+    <p id="wait-text" style="margin-top: 15px;">Sunucunun başlatması bekleniyor...</p>
+</div>
 
         <div id="quiz-view" style="display: none;">
             <div id="question-content">
@@ -58,6 +73,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
