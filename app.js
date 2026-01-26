@@ -1,4 +1,4 @@
-// 1. SENİN FIREBASE BİLGİLERİN
+// 1. SENİN FIREBASE BİLGİLERİN (Dokunma)
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
@@ -9,13 +9,12 @@ const firebaseConfig = {
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
 };
 
-// Firebase Başlatma
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
 
-// 2. SORU BANKASI
+// 2. SORU BANKASI (20 SORU)
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
@@ -39,12 +38,11 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
-// 3. DEĞİŞKENLER
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt;
 
-// 4. ANA GİRİŞ
+// GİRİŞ
 window.joinQuiz = function() {
     my.name = document.getElementById('userName').value;
     my.room = document.getElementById('roomCode').value;
@@ -61,7 +59,7 @@ window.joinQuiz = function() {
         document.getElementById('wait-text').style.display = 'none';
         db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
     } else {
-        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
+        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0, choice: -1 });
     }
     listen();
 }
@@ -93,29 +91,38 @@ function syncUI(step, qIdx) {
 
 function renderQuestion(idx) {
     clearInterval(timerInt);
-    my.selected = -1;
+    my.selected = -1; // Seçim kilidini sıfırla
     timerVal = 20.0;
     
     document.getElementById('question-content').style.display = 'block';
     document.getElementById('score-content').style.display = 'none';
-    document.getElementById('q-text').innerText = questions[idx].q;
+    document.getElementById('q-text').innerText = (idx + 1) + ". " + questions[idx].q;
     document.getElementById('timer').innerText = "20.0";
     
     const cont = document.getElementById('options-container');
     cont.innerHTML = "";
+    
     questions[idx].a.forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.id = 'btn-' + i;
         btn.innerText = opt;
-        if(my.role === 'competitor') btn.onclick = () => select(i, idx);
-        else btn.disabled = true;
+        
+        // Yarışmacı ise tıklama özelliğini ekle
+        if(my.role === 'competitor') {
+            btn.addEventListener('click', function() {
+                handleSelection(i, idx);
+            });
+        } else {
+            btn.disabled = true;
+        }
         cont.appendChild(btn);
     });
 
     if(my.role === 'host') {
         document.getElementById('admin-area').style.display = 'block';
         document.getElementById('main-action-btn').innerText = "Cevabı Göster";
+        document.getElementById('main-action-btn').disabled = true;
     }
     startTimer();
 }
@@ -125,30 +132,54 @@ function startTimer() {
     timerInt = setInterval(() => {
         timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
-        if(timerVal <= 0) clearInterval(timerInt);
+        if(timerVal <= 0) {
+            clearInterval(timerInt);
+            document.getElementById('timer').innerText = "0.0";
+            if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
+        }
     }, 100);
 }
 
-function select(idx, qIdx) {
+// YARIŞMACI SEÇİM YAPTIĞINDA
+function handleSelection(idx, qIdx) {
+    // Zaten seçilmişse veya süre bittiyse işlem yapma
     if(my.selected !== -1 || timerVal <= 0) return;
-    my.selected = idx;
-    clearInterval(timerInt); 
     
+    my.selected = idx;
+    clearInterval(timerInt); // SÜREYİ DURDUR (Sıfırlanmaz, o anda kalır)
+    
+    // Seçilen butonu turuncu yap
     document.getElementById('btn-' + idx).classList.add('selected-orange');
-    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+    
+    // Diğer butonları kapat
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.disabled = true;
+    });
 
+    // Puanlama
     const isCorrect = idx === questions[qIdx].c;
-    const timeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
+    const timeSpent = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
     if(isCorrect) my.score += 5;
-    my.time += parseFloat(timeUsed);
+    my.time += parseFloat(timeSpent);
 
-    db.ref('rooms/' + my.room + '/users/' + my.name).update({ score: my.score, time: my.time });
+    // Veritabanına gönder
+    db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
+        score: my.score, 
+        time: my.time,
+        choice: idx 
+    });
 }
 
 function showAnswer(qIdx) {
     clearInterval(timerInt);
-    document.getElementById('btn-' + questions[qIdx].c).classList.add('correct-green');
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
+    const correctIdx = questions[qIdx].c;
+    const correctBtn = document.getElementById('btn-' + correctIdx);
+    if(correctBtn) correctBtn.classList.add('correct-green');
+    
+    if(my.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Puan Durumu";
+        document.getElementById('main-action-btn').disabled = false;
+    }
 }
 
 function renderScore() {
