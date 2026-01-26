@@ -3,7 +3,7 @@
 body {
     font-family: 'Segoe UI', sans-serif;
     min-height: 100vh;
-    /* WebP Arka plan sabitleme */
+    /* WebP dosya yolu ve karartma perdesi */
     background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), 
                 url('arkaplan.webp') no-repeat center center fixed;
     background-size: cover !important;
@@ -29,5 +29,5 @@ body {
 .correct-green { background: #27ae60 !important; border-color: #2ecc71 !important; }
 
 #timer { font-size: 3.5rem; color: #f1c40f; font-weight: bold; font-family: monospace; }
-.action-btn { background: #c0392b; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
+.action-btn { background: #c0392b; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
 .lobby-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; list-style: none; margin: 15px 0; text-align: left;}
