@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 2. SORU BANKASI (20 SORU)
+// 2. SORULAR
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
@@ -36,60 +36,83 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
-// 3. DEĞİŞKENLER VE MANTIK
-let myData = { name: "", role: "", room: "", score: 0, totalTime: 0 };
-let currentQuestionIndex = 0;
+// 3. OYUN DEĞİŞKENLERİ
+let myData = { name: "", role: "", room: "", score: 0, time: 0 };
+let currentQuestionIndex = -1;
 let timerInterval;
 
+// 4. FONKSİYONLAR
 function joinQuiz() {
     myData.name = document.getElementById('userName').value;
     myData.role = document.getElementById('userRole').value;
     myData.room = document.getElementById('roomCode').value;
 
-    if (!myData.name || !myData.room) return alert("Lütfen isim ve oda kodunu girin!");
+    if (!myData.name || !myData.room) return alert("Eksik bilgi!");
 
     db.ref('rooms/' + myData.room + '/status').once('value', (snap) => {
         if (snap.val() === 'started' && myData.role === 'competitor') {
-            alert("Yarışma başladı, katılamazsınız!");
-        } else {
-            document.getElementById('login-view').style.display = 'none';
+            return alert("Yarışma başladı!");
+        }
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('waiting-view').style.display = 'block';
+        document.getElementById('display-room-code').innerText = "Oda: " + myData.room;
+        initLobby();
+    });
+}
+
+function initLobby() {
+    if(myData.role === 'host') {
+        document.getElementById('host-start-area').style.display = 'block';
+        document.getElementById('wait-msg').style.display = 'none';
+        db.ref('rooms/' + myData.room).update({ status: 'waiting', currentQuestion: -1 });
+    } else {
+        db.ref('rooms/' + myData.room + '/users/' + myData.name).set({ score: 0, time: 0 });
+    }
+
+    db.ref('rooms/' + myData.room + '/users').on('value', (snap) => {
+        const list = document.getElementById('player-list');
+        list.innerHTML = "";
+        snap.forEach(u => {
+            const li = document.createElement('li');
+            li.innerText = u.key;
+            list.appendChild(li);
+        });
+    });
+
+    db.ref('rooms/' + myData.room + '/currentQuestion').on('value', (snap) => {
+        currentQuestionIndex = snap.val();
+        if (currentQuestionIndex >= 0) {
+            document.getElementById('waiting-view').style.display = 'none';
             document.getElementById('quiz-view').style.display = 'block';
-            startApp();
+            if (currentQuestionIndex < questions.length) displayQuestion(currentQuestionIndex);
+            else showFinalResults();
         }
     });
 }
 
-function startApp() {
-    if (myData.role === 'host') {
-        document.getElementById('admin-controls').style.display = 'block';
-        db.ref('rooms/' + myData.room).set({ status: 'waiting', currentQuestion: 0 });
-    }
-
-    db.ref('rooms/' + myData.room + '/currentQuestion').on('value', (snap) => {
-        currentQuestionIndex = snap.val();
-        if (currentQuestionIndex !== null && currentQuestionIndex < questions.length) {
-            displayQuestion(currentQuestionIndex);
-        } else if (currentQuestionIndex >= questions.length) {
-            showResults();
-        }
-    });
+function startQuizNow() {
+    db.ref('rooms/' + myData.room).update({ status: 'started', currentQuestion: 0 });
 }
 
 function displayQuestion(index) {
     const q = questions[index];
+    document.getElementById('question-area').style.display = 'block';
+    document.getElementById('mid-scoreboard').style.display = 'none';
     document.getElementById('question-text').innerText = q.q;
-    document.getElementById('question-count').innerText = `Soru: ${index + 1}/${questions.length}`;
+    document.getElementById('question-count').innerText = `Soru: ${index+1}/${questions.length}`;
+    
     const container = document.getElementById('options-container');
     container.innerHTML = "";
-
     q.a.forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.innerText = opt;
-        btn.onclick = () => submitAnswer(i, index, btn);
+        if(myData.role === 'competitor') btn.onclick = () => submitAnswer(i, index, btn);
+        else btn.disabled = true;
         container.appendChild(btn);
     });
 
+    if(myData.role === 'host') document.getElementById('admin-controls').style.display = 'block';
     startTimer();
 }
 
@@ -97,66 +120,61 @@ function startTimer() {
     clearInterval(timerInterval);
     let timeLeft = 20;
     document.getElementById('timer').innerText = timeLeft;
-    document.getElementById('next-btn').disabled = true;
-    
     timerInterval = setInterval(() => {
         timeLeft--;
         document.getElementById('timer').innerText = timeLeft;
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            disableOptions();
-            if (myData.role === 'host') document.getElementById('next-btn').disabled = false;
-        }
+        if (timeLeft <= 0) finishQuestion();
     }, 1000);
 }
 
 function submitAnswer(choice, qIndex, btn) {
     clearInterval(timerInterval);
-    disableOptions();
-    
     const timeTaken = 20 - parseInt(document.getElementById('timer').innerText);
-    const isCorrect = choice === questions[qIndex].c;
-
-    if (isCorrect) {
+    if (choice === questions[qIndex].c) {
         btn.classList.add('correct');
         myData.score += 5;
-        myData.totalTime += timeTaken;
+        myData.time += timeTaken;
     } else {
         btn.classList.add('wrong');
-        myData.totalTime += 20; // Hatalı/Boş cevap cezası
+        myData.time += 20;
     }
-
-    db.ref('rooms/' + myData.room + '/users/' + myData.name).set({
-        score: myData.score,
-        time: myData.totalTime
-    });
-
-    if (myData.role === 'host') {
-        document.getElementById('next-btn').disabled = false;
-    }
+    db.ref('rooms/' + myData.room + '/users/' + myData.name).update({ score: myData.score, time: myData.time });
+    finishQuestion();
 }
 
-function disableOptions() {
+function finishQuestion() {
+    clearInterval(timerInterval);
     const btns = document.querySelectorAll('.option-btn');
     btns.forEach(b => b.disabled = true);
-}
-
-function nextQuestion() {
-    db.ref('rooms/' + myData.room + '/currentQuestion').set(currentQuestionIndex + 1);
-}
-
-function showResults() {
-    document.getElementById('quiz-view').style.display = 'none';
-    document.getElementById('result-view').style.display = 'block';
     
+    // Ara puan durumunu göster
+    document.getElementById('question-area').style.display = 'none';
+    document.getElementById('mid-scoreboard').style.display = 'block';
+    
+    updateScoreboard('leaderboard-list');
+
+    if(myData.role === 'host') document.getElementById('next-btn').disabled = false;
+}
+
+function updateScoreboard(targetId) {
     db.ref('rooms/' + myData.room + '/users').once('value', (snap) => {
         const users = [];
         snap.forEach(u => { users.push({ name: u.key, ...u.val() }); });
         users.sort((a, b) => b.score - a.score || a.time - b.time);
         
-        const list = document.getElementById('final-leaderboard');
-        list.innerHTML = "<h3>Sıralama:</h3>" + users.map((u, i) => 
-            `<p>${i+1}. ${u.name} - ${u.score} Puan - Toplam Süre: ${u.time} sn</p>`
+        document.getElementById(targetId).innerHTML = users.map((u, i) => 
+            `<div class="score-row"><span>${i+1}. ${u.name}</span><span>${u.score} P</span></div>`
         ).join("");
     });
+}
+
+function nextQuestion() {
+    document.getElementById('next-btn').disabled = true;
+    db.ref('rooms/' + myData.room).update({ currentQuestion: currentQuestionIndex + 1 });
+}
+
+function showFinalResults() {
+    document.getElementById('quiz-view').style.display = 'none';
+    document.getElementById('result-view').style.display = 'block';
+    updateScoreboard('final-leaderboard');
 }
