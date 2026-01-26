@@ -1,4 +1,4 @@
-// 1. FIREBASE AYARLARI (Kendi bilgilerini buraya yapıştır)
+// FIREBASE BİLGİLERİNİ BURAYA YAPIŞTIR
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
@@ -8,11 +8,9 @@ const firebaseConfig = {
     messagingSenderId: "78708182382",
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 2. SORU BANKASI (20 SORU)
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
@@ -36,127 +34,166 @@ const questions = [
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
 ];
 
-// 3. DEĞİŞKENLER VE MANTIK
-let myData = { name: "", role: "", room: "", score: 0, totalTime: 0 };
-let currentQuestionIndex = 0;
+let myInfo = { name: "", role: "", room: "", score: 0, time: 0, hasAnswered: false };
+let timerVal = 20.0;
 let timerInterval;
 
 function joinQuiz() {
-    myData.name = document.getElementById('userName').value;
-    myData.role = document.getElementById('userRole').value;
-    myData.room = document.getElementById('roomCode').value;
+    myInfo.name = document.getElementById('userName').value;
+    myInfo.room = document.getElementById('roomCode').value;
+    myInfo.role = document.getElementById('userRole').value;
 
-    if (!myData.name || !myData.room) return alert("Lütfen isim ve oda kodunu girin!");
+    if(!myInfo.name || !myInfo.room) return alert("Bilgileri girin!");
 
-    db.ref('rooms/' + myData.room + '/status').once('value', (snap) => {
-        if (snap.val() === 'started' && myData.role === 'competitor') {
-            alert("Yarışma başladı, katılamazsınız!");
-        } else {
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('quiz-view').style.display = 'block';
-            startApp();
-        }
-    });
-}
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('waiting-view').style.display = 'block';
+    document.getElementById('room-display').innerText = "Oda: " + myInfo.room;
 
-function startApp() {
-    if (myData.role === 'host') {
-        document.getElementById('admin-controls').style.display = 'block';
-        db.ref('rooms/' + myData.room).set({ status: 'waiting', currentQuestion: 0 });
+    if(myInfo.role === 'host') {
+        document.getElementById('host-controls').style.display = 'block';
+        document.getElementById('wait-text').style.display = 'none';
+        db.ref('rooms/' + myInfo.room).set({ currentQ: -1, step: 'lobby' });
+    } else {
+        db.ref('rooms/' + myInfo.room + '/users/' + myInfo.name).set({ score: 0, time: 0 });
     }
 
-    db.ref('rooms/' + myData.room + '/currentQuestion').on('value', (snap) => {
-        currentQuestionIndex = snap.val();
-        if (currentQuestionIndex !== null && currentQuestionIndex < questions.length) {
-            displayQuestion(currentQuestionIndex);
-        } else if (currentQuestionIndex >= questions.length) {
-            showResults();
+    listenRoom();
+}
+
+function listenRoom() {
+    // Katılımcı listesini dinle
+    db.ref('rooms/' + myInfo.room + '/users').on('value', (snap) => {
+        const list = document.getElementById('player-list');
+        list.innerHTML = "";
+        snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
+    });
+
+    // Oyun durumunu dinle
+    db.ref('rooms/' + myInfo.room).on('value', (snap) => {
+        const data = snap.val();
+        if(!data) return;
+
+        if(data.currentQ >= 0) {
+            document.getElementById('waiting-view').style.display = 'none';
+            document.getElementById('quiz-view').style.display = 'block';
+            updateUI(data);
         }
+        if(data.currentQ >= questions.length) showFinal(data);
     });
 }
 
-function displayQuestion(index) {
-    const q = questions[index];
-    document.getElementById('question-text').innerText = q.q;
-    document.getElementById('question-count').innerText = `Soru: ${index + 1}/${questions.length}`;
+function updateUI(data) {
+    const qIndex = data.currentQ;
+    const step = data.step;
+
+    if(step === 'question') {
+        renderQuestion(qIndex);
+    } else if(step === 'reveal') {
+        renderReveal(qIndex);
+    } else if(step === 'score') {
+        renderScore();
+    }
+}
+
+function renderQuestion(idx) {
+    clearInterval(timerInterval);
+    myInfo.hasAnswered = false;
+    document.getElementById('question-content').style.display = 'block';
+    document.getElementById('score-content').style.display = 'none';
+    document.getElementById('q-text').innerText = questions[idx].q;
+    
     const container = document.getElementById('options-container');
     container.innerHTML = "";
-
-    q.a.forEach((opt, i) => {
+    questions[idx].a.forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
+        btn.id = 'btn-' + i;
         btn.innerText = opt;
-        btn.onclick = () => submitAnswer(i, index, btn);
+        if(myInfo.role === 'competitor') btn.onclick = () => handleAnswer(i, idx);
+        else btn.disabled = true;
         container.appendChild(btn);
     });
 
-    startTimer();
+    if(myInfo.role === 'host') {
+        document.getElementById('admin-area').style.display = 'block';
+        document.getElementById('main-action-btn').innerText = "Cevabı Göster";
+        document.getElementById('main-action-btn').disabled = true;
+    }
+    
+    runTimer();
 }
 
-function startTimer() {
-    clearInterval(timerInterval);
-    let timeLeft = 20;
-    document.getElementById('timer').innerText = timeLeft;
-    document.getElementById('next-btn').disabled = true;
-    
+function runTimer() {
+    timerVal = 20.0;
     timerInterval = setInterval(() => {
-        timeLeft--;
-        document.getElementById('timer').innerText = timeLeft;
-        if (timeLeft <= 0) {
+        timerVal = (timerVal - 0.1).toFixed(1);
+        document.getElementById('timer').innerText = timerVal;
+        if(timerVal <= 0) {
             clearInterval(timerInterval);
-            disableOptions();
-            if (myData.role === 'host') document.getElementById('next-btn').disabled = false;
+            if(myInfo.role === 'host') document.getElementById('main-action-btn').disabled = false;
         }
-    }, 1000);
+    }, 100);
 }
 
-function submitAnswer(choice, qIndex, btn) {
-    clearInterval(timerInterval);
-    disableOptions();
+function handleAnswer(choice, qIdx) {
+    if(myInfo.hasAnswered) return;
+    myInfo.hasAnswered = true;
+    clearInterval(timerInterval); // Yarışmacı için süre durur
     
-    const timeTaken = 20 - parseInt(document.getElementById('timer').innerText);
-    const isCorrect = choice === questions[qIndex].c;
+    document.getElementById('btn-' + choice).classList.add('selected-orange');
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
-    if (isCorrect) {
-        btn.classList.add('correct');
-        myData.score += 5;
-        myData.totalTime += timeTaken;
+    const isCorrect = choice === questions[qIdx].c;
+    const timeSpent = (20 - parseFloat(timerVal)).toFixed(2);
+    
+    if(isCorrect) {
+        myInfo.score += 5;
+        myInfo.time += parseFloat(timeSpent);
     } else {
-        btn.classList.add('wrong');
-        myData.totalTime += 20; // Hatalı/Boş cevap cezası
+        myInfo.time += 20;
     }
-
-    db.ref('rooms/' + myData.room + '/users/' + myData.name).set({
-        score: myData.score,
-        time: myData.totalTime
-    });
-
-    if (myData.role === 'host') {
-        document.getElementById('next-btn').disabled = false;
-    }
-}
-
-function disableOptions() {
-    const btns = document.querySelectorAll('.option-btn');
-    btns.forEach(b => b.disabled = true);
-}
-
-function nextQuestion() {
-    db.ref('rooms/' + myData.room + '/currentQuestion').set(currentQuestionIndex + 1);
-}
-
-function showResults() {
-    document.getElementById('quiz-view').style.display = 'none';
-    document.getElementById('result-view').style.display = 'block';
     
-    db.ref('rooms/' + myData.room + '/users').once('value', (snap) => {
-        const users = [];
-        snap.forEach(u => { users.push({ name: u.key, ...u.val() }); });
-        users.sort((a, b) => b.score - a.score || a.time - b.time);
-        
-        const list = document.getElementById('final-leaderboard');
-        list.innerHTML = "<h3>Sıralama:</h3>" + users.map((u, i) => 
-            `<p>${i+1}. ${u.name} - ${u.score} Puan - Toplam Süre: ${u.time} sn</p>`
-        ).join("");
+    db.ref('rooms/' + myInfo.room + '/users/' + myInfo.name).update({ score: myInfo.score, time: myInfo.time, lastChoice: choice });
+}
+
+function renderReveal(idx) {
+    clearInterval(timerInterval);
+    const correct = questions[idx].c;
+    document.getElementById('btn-' + correct).classList.add('correct-green');
+    
+    if(myInfo.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Puan Durumu";
+    }
+}
+
+function renderScore() {
+    document.getElementById('question-content').style.display = 'none';
+    document.getElementById('score-content').style.display = 'block';
+    
+    db.ref('rooms/' + myInfo.room + '/users').once('value', (snap) => {
+        const users = []; snap.forEach(u => { users.push({name: u.key, ...u.val()}); });
+        users.sort((a,b) => b.score - a.score || a.time - b.time);
+        document.getElementById('score-list').innerHTML = users.map((u,i) => `<div>${i+1}. ${u.name} - ${u.score}P</div>`).join("");
     });
+
+    if(myInfo.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+    }
+}
+
+function handleAdminAction() {
+    db.ref('rooms/' + myInfo.room).once('value', (snap) => {
+        const data = snap.val();
+        if(data.step === 'question') db.ref('rooms/' + myInfo.room).update({ step: 'reveal' });
+        else if(data.step === 'reveal') db.ref('rooms/' + myInfo.room).update({ step: 'score' });
+        else if(data.step === 'score') db.ref('rooms/' + myInfo.room).update({ currentQ: data.currentQ + 1, step: 'question' });
+    });
+}
+
+function startQuiz() { db.ref('rooms/' + myInfo.room).update({ currentQ: 0, step: 'question' }); }
+
+function showFinal(data) {
+    document.getElementById('quiz-view').style.display = 'none';
+    document.getElementById('final-view').style.display = 'block';
+    // Final sıralama renderScore ile aynı mantık
 }
