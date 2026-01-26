@@ -3,9 +3,10 @@
 body {
     font-family: 'Segoe UI', sans-serif;
     min-height: 100vh;
-    /* .webp uzantısı buraya eklendi */
-    background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('arkaplan.webp') no-repeat center center fixed;
-    background-size: cover;
+    /* WebP Arka plan sabitleme */
+    background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), 
+                url('arkaplan.webp') no-repeat center center fixed;
+    background-size: cover !important;
     display: flex; justify-content: center; align-items: center; padding: 20px;
 }
 
@@ -17,25 +18,16 @@ body {
     color: white; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 
-.input-group input, .input-group select {
-    width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; outline: none;
-}
-
-.action-btn {
-    background: #c0392b; color: white; border: none; padding: 15px;
-    border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;
-}
-
 .option-btn {
     width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px;
     background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
     color: white; cursor: pointer; text-align: left; font-size: 1.1rem; transition: 0.2s;
 }
 
-/* YENİ DURUM RENKLERİ */
-.selected-orange { background: #e67e22 !important; border-color: #d35400 !important; color: white; }
-.correct-green { background: #27ae60 !important; border-color: #2ecc71 !important; color: white; }
+/* ÖZEL DURUM RENKLERİ */
+.selected-orange { background: #e67e22 !important; border-color: #d35400 !important; }
+.correct-green { background: #27ae60 !important; border-color: #2ecc71 !important; }
 
 #timer { font-size: 3.5rem; color: #f1c40f; font-weight: bold; font-family: monospace; }
-.lobby-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; list-style: none; }
+.action-btn { background: #c0392b; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
+.lobby-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; list-style: none; margin: 15px 0; text-align: left;}
