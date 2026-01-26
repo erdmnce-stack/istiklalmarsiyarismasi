@@ -38,17 +38,15 @@ const questions = [
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt = null;
-
-// EKRAN TAKİBİ İÇİN KRİTİK DEĞİŞKENLER
-let lastProcessedStep = "";
-let lastProcessedQ = -1;
+let currentStep = "";
+let currentQIdx = -1;
 
 window.joinQuiz = function() {
     my.name = document.getElementById('userName').value;
     my.room = document.getElementById('roomCode').value;
     my.role = document.getElementById('userRole').value;
 
-    if(!my.name || !my.room) return alert("Bilgileri girin!");
+    if(!my.name || !my.room) return alert("Bilgileri eksiksiz girin!");
 
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('waiting-view').style.display = 'block';
@@ -56,6 +54,7 @@ window.joinQuiz = function() {
 
     if(my.role === 'host') {
         document.getElementById('host-controls').style.display = 'block';
+        document.getElementById('wait-text').style.display = 'none';
         db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
     } else {
         db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
@@ -73,12 +72,12 @@ function listen() {
     db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
-
-        // ÖNEMLİ: Sadece Soru No veya Aşama değişmişse ekranı yenile!
-        if(data.step !== lastProcessedStep || data.currentQ !== lastProcessedQ) {
-            lastProcessedStep = data.step;
-            lastProcessedQ = data.currentQ;
-            syncUI(data.step, data.currentQ);
+        
+        // Eğer soru veya aşama değişmişse UI güncelle
+        if(currentStep !== data.step || currentQIdx !== data.currentQ) {
+            currentStep = data.step;
+            currentQIdx = data.currentQ;
+            syncUI(currentStep, currentQIdx);
         }
     });
 }
@@ -99,7 +98,9 @@ function syncUI(step, qIdx) {
 }
 
 function renderQuestion(idx) {
-    clearInterval(timerInt);
+    // Önceki zamanlayıcıyı tamamen temizle
+    if(timerInt) clearInterval(timerInt);
+    
     my.selected = -1;
     timerVal = 20.0;
     
@@ -115,8 +116,11 @@ function renderQuestion(idx) {
         btn.className = 'option-btn';
         btn.id = 'btn-' + i;
         btn.innerText = opt;
-        if(my.role === 'competitor') btn.onclick = () => selectChoice(i, idx);
-        else btn.disabled = true;
+        if(my.role === 'competitor') {
+            btn.onclick = () => handlePlayerChoice(i, idx);
+        } else {
+            btn.disabled = true;
+        }
         cont.appendChild(btn);
     });
 
@@ -126,6 +130,7 @@ function renderQuestion(idx) {
         document.getElementById('main-action-btn').disabled = true;
     }
     
+    // YEREL ZAMANLAYICIYI BAŞLAT
     startLocalTimer();
 }
 
@@ -138,18 +143,21 @@ function startLocalTimer() {
             clearInterval(timerInt);
             document.getElementById('timer').innerText = "0.0";
             if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
+            // Süre bitince yarışmacı seçemez
             document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
         }
     }, 100);
 }
 
-function selectChoice(idx, qIdx) {
+function handlePlayerChoice(idx, qIdx) {
     if(my.selected !== -1 || timerVal <= 0) return;
     
     my.selected = idx;
-    clearInterval(timerInt); // Sadece tıklayan yarışmacının saati durur
+    // SADECE BU CİHAZDAKİ ZAMANLAYICIYI DURDUR
+    clearInterval(timerInt); 
     
-    document.getElementById('btn-' + idx).classList.add('selected-orange');
+    const selectedBtn = document.getElementById('btn-' + idx);
+    selectedBtn.classList.add('selected-orange');
     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
     const isCorrect = idx === questions[qIdx].c;
@@ -158,19 +166,22 @@ function selectChoice(idx, qIdx) {
     if(isCorrect) my.score += 5;
     my.time += parseFloat(timeUsed);
 
-    // Bu güncelleme artık renderQuestion'ı tetiklemeyecek!
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
         score: my.score, time: my.time, choice: idx 
     });
 }
 
 function showReveal(qIdx) {
+    // Sunucu ilerlediğinde hala dönen bir zamanlayıcı varsa (sunucu veya yavaş yarışmacılar için) durdur
     if(timerInt) clearInterval(timerInt);
-    const correct = questions[qIdx].c;
-    const btn = document.getElementById('btn-' + correct);
-    if(btn) btn.classList.add('correct-green');
     
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
+    const correctIdx = questions[qIdx].c;
+    const correctBtn = document.getElementById('btn-' + correctIdx);
+    if(correctBtn) correctBtn.classList.add('correct-green');
+    
+    if(my.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Puan Durumu";
+    }
 }
 
 function renderScore() {
@@ -183,15 +194,17 @@ function renderScore() {
         document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
     });
     
-    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+    if(my.role === 'host') {
+        document.getElementById('main-action-btn').innerText = "Sonraki Soru";
+    }
 }
 
 window.handleAdminAction = function() {
     db.ref('rooms/' + my.room).once('value', snap => {
-        const d = snap.val();
-        if(d.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
-        else if(d.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
-        else if(d.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: d.currentQ + 1, step: 'question' });
+        const data = snap.val();
+        if(data.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
+        else if(data.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
+        else if(data.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: data.currentQ + 1, step: 'question' });
     });
 }
 
