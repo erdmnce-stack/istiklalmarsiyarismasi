@@ -1,4 +1,4 @@
-// 1. FIREBASE BİLGİLERİN
+// 1. SENİN FIREBASE BİLGİLERİN (Dokunma)
 const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
@@ -9,9 +9,12 @@ const firebaseConfig = {
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.database();
 
+// 2. SORU BANKASI (20 SORU)
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
@@ -37,16 +40,15 @@ const questions = [
 
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
-let timerInt = null;
-let currentStep = "";
-let currentQIdx = -1;
+let timerInt;
 
+// GİRİŞ
 window.joinQuiz = function() {
     my.name = document.getElementById('userName').value;
     my.room = document.getElementById('roomCode').value;
     my.role = document.getElementById('userRole').value;
 
-    if(!my.name || !my.room) return alert("Bilgileri eksiksiz girin!");
+    if(!my.name || !my.room) return alert("Lütfen adınızı ve oda kodunu giriniz!");
 
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('waiting-view').style.display = 'block';
@@ -57,7 +59,7 @@ window.joinQuiz = function() {
         document.getElementById('wait-text').style.display = 'none';
         db.ref('rooms/' + my.room).set({ currentQ: -1, step: 'lobby' });
     } else {
-        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
+        db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0, choice: -1 });
     }
     listen();
 }
@@ -73,35 +75,23 @@ function listen() {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
         
-        // Eğer soru veya aşama değişmişse UI güncelle
-        if(currentStep !== data.step || currentQIdx !== data.currentQ) {
-            currentStep = data.step;
-            currentQIdx = data.currentQ;
-            syncUI(currentStep, currentQIdx);
-        }
+        document.getElementById('waiting-view').style.display = 'none';
+        document.getElementById('quiz-view').style.display = 'block';
+        
+        if(data.currentQ >= questions.length) return showFinal();
+        syncUI(data.step, data.currentQ);
     });
 }
 
 function syncUI(step, qIdx) {
-    document.getElementById('waiting-view').style.display = 'none';
-    document.getElementById('quiz-view').style.display = 'block';
-
-    if(qIdx >= questions.length) return showFinal();
-
-    if(step === 'question') {
-        renderQuestion(qIdx);
-    } else if(step === 'reveal') {
-        showReveal(qIdx);
-    } else if(step === 'score') {
-        renderScore();
-    }
+    if(step === 'question') renderQuestion(qIdx);
+    else if(step === 'reveal') showAnswer(qIdx);
+    else if(step === 'score') renderScore();
 }
 
 function renderQuestion(idx) {
-    // Önceki zamanlayıcıyı tamamen temizle
-    if(timerInt) clearInterval(timerInt);
-    
-    my.selected = -1;
+    clearInterval(timerInt);
+    my.selected = -1; // Seçim kilidini sıfırla
     timerVal = 20.0;
     
     document.getElementById('question-content').style.display = 'block';
@@ -111,13 +101,18 @@ function renderQuestion(idx) {
     
     const cont = document.getElementById('options-container');
     cont.innerHTML = "";
+    
     questions[idx].a.forEach((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.id = 'btn-' + i;
         btn.innerText = opt;
+        
+        // Yarışmacı ise tıklama özelliğini ekle
         if(my.role === 'competitor') {
-            btn.onclick = () => handlePlayerChoice(i, idx);
+            btn.addEventListener('click', function() {
+                handleSelection(i, idx);
+            });
         } else {
             btn.disabled = true;
         }
@@ -129,88 +124,86 @@ function renderQuestion(idx) {
         document.getElementById('main-action-btn').innerText = "Cevabı Göster";
         document.getElementById('main-action-btn').disabled = true;
     }
-    
-    // YEREL ZAMANLAYICIYI BAŞLAT
-    startLocalTimer();
+    startTimer();
 }
 
-function startLocalTimer() {
+function startTimer() {
+    clearInterval(timerInt);
     timerInt = setInterval(() => {
         timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
-        
         if(timerVal <= 0) {
             clearInterval(timerInt);
             document.getElementById('timer').innerText = "0.0";
             if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
-            // Süre bitince yarışmacı seçemez
-            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
         }
     }, 100);
 }
 
-function handlePlayerChoice(idx, qIdx) {
+// YARIŞMACI SEÇİM YAPTIĞINDA
+function handleSelection(idx, qIdx) {
+    // Zaten seçilmişse veya süre bittiyse işlem yapma
     if(my.selected !== -1 || timerVal <= 0) return;
     
     my.selected = idx;
-    // SADECE BU CİHAZDAKİ ZAMANLAYICIYI DURDUR
-    clearInterval(timerInt); 
+    clearInterval(timerInt); // SÜREYİ DURDUR (Sıfırlanmaz, o anda kalır)
     
-    const selectedBtn = document.getElementById('btn-' + idx);
-    selectedBtn.classList.add('selected-orange');
-    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+    // Seçilen butonu turuncu yap
+    document.getElementById('btn-' + idx).classList.add('selected-orange');
+    
+    // Diğer butonları kapat
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.disabled = true;
+    });
 
+    // Puanlama
     const isCorrect = idx === questions[qIdx].c;
-    const timeUsed = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
-    
+    const timeSpent = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
     if(isCorrect) my.score += 5;
-    my.time += parseFloat(timeUsed);
+    my.time += parseFloat(timeSpent);
 
+    // Veritabanına gönder
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
-        score: my.score, time: my.time, choice: idx 
+        score: my.score, 
+        time: my.time,
+        choice: idx 
     });
 }
 
-function showReveal(qIdx) {
-    // Sunucu ilerlediğinde hala dönen bir zamanlayıcı varsa (sunucu veya yavaş yarışmacılar için) durdur
-    if(timerInt) clearInterval(timerInt);
-    
+function showAnswer(qIdx) {
+    clearInterval(timerInt);
     const correctIdx = questions[qIdx].c;
     const correctBtn = document.getElementById('btn-' + correctIdx);
     if(correctBtn) correctBtn.classList.add('correct-green');
     
     if(my.role === 'host') {
         document.getElementById('main-action-btn').innerText = "Puan Durumu";
+        document.getElementById('main-action-btn').disabled = false;
     }
 }
 
 function renderScore() {
     document.getElementById('question-content').style.display = 'none';
     document.getElementById('score-content').style.display = 'block';
-    
     db.ref('rooms/' + my.room + '/users').once('value', snap => {
         const u = []; snap.forEach(x => u.push({name: x.key, ...x.val()}));
         u.sort((a,b) => b.score - a.score || a.time - b.time);
-        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div class="score-row"><span>${i+1}. ${x.name}</span><span>${x.score} P</span></div>`).join("");
+        document.getElementById('score-list').innerHTML = u.map((x,i) => `<div>${i+1}. ${x.name} - ${x.score}P</div>`).join("");
     });
-    
-    if(my.role === 'host') {
-        document.getElementById('main-action-btn').innerText = "Sonraki Soru";
-    }
+    if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Sonraki Soru";
 }
 
 window.handleAdminAction = function() {
     db.ref('rooms/' + my.room).once('value', snap => {
-        const data = snap.val();
-        if(data.step === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
-        else if(data.step === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
-        else if(data.step === 'score') db.ref('rooms/' + my.room).update({ currentQ: data.currentQ + 1, step: 'question' });
+        const s = snap.val().step;
+        const q = snap.val().currentQ;
+        if(s === 'question') db.ref('rooms/' + my.room).update({ step: 'reveal' });
+        else if(s === 'reveal') db.ref('rooms/' + my.room).update({ step: 'score' });
+        else if(s === 'score') db.ref('rooms/' + my.room).update({ currentQ: q + 1, step: 'question' });
     });
 }
 
-window.startQuiz = function() {
-    db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' });
-}
+window.startQuiz = function() { db.ref('rooms/' + my.room).update({ currentQ: 0, step: 'question' }); }
 
 function showFinal() {
     document.getElementById('quiz-view').style.display = 'none';
