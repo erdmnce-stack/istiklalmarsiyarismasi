@@ -11,12 +11,9 @@
     <div id="app" class="glass-panel">
         <div id="login-view">
             <h1>12 Mart İstiklal Marşı'nın Kabulü</h1>
-            <p>Mehmet Akif Ersoy'u Anma Haftası Bilgi Yarışması</p>
-            
+            <p>Bilgi Yarışması Girişi</p>
             <div class="input-group">
                 <input type="text" id="userName" placeholder="Ad Soyad">
-                <input type="text" id="userCity" placeholder="İl / İlçe">
-                <input type="text" id="userSchool" placeholder="Okul Adı">
                 <input type="text" id="roomCode" placeholder="Yarışma Kodu">
                 <select id="userRole">
                     <option value="competitor">Yarışmacı</option>
@@ -26,16 +23,32 @@
             <button class="action-btn" onclick="joinQuiz()">Yarışmaya Katıl</button>
         </div>
 
-        <div id="quiz-view" style="display: none;">
-            <div class="quiz-header">
-                <div id="timer">20</div>
-                <div id="question-count">Soru: 1/20</div>
+        <div id="waiting-view" style="display: none;">
+            <h2 id="display-room-code">Oda: -</h2>
+            <div class="lobby-box">
+                <h3>Katılımcılar</h3>
+                <ul id="player-list"></ul>
             </div>
-            
-            <h2 id="question-text">Soru yükleniyor...</h2>
-            
-            <div id="options-container">
+            <div id="host-start-area" style="display: none;">
+                <button class="action-btn" onclick="startQuizNow()" style="background: #27ae60;">Yarışmayı Başlat</button>
+            </div>
+            <p id="wait-msg">Sunucunun yarışmayı başlatması bekleniyor...</p>
+        </div>
+
+        <div id="quiz-view" style="display: none;">
+            <div id="question-area">
+                <div class="quiz-header">
+                    <div id="timer">20</div>
+                    <div id="question-count">Soru: 1/20</div>
                 </div>
+                <h2 id="question-text">Soru yükleniyor...</h2>
+                <div id="options-container"></div>
+            </div>
+
+            <div id="mid-scoreboard" style="display: none;">
+                <h3>Anlık Puan Durumu</h3>
+                <div id="leaderboard-list"></div>
+            </div>
 
             <div id="admin-controls" style="display: none; margin-top: 20px;">
                 <button id="next-btn" class="action-btn" onclick="nextQuestion()" disabled>Sonraki Soru</button>
@@ -44,8 +57,7 @@
 
         <div id="result-view" style="display: none;">
             <h2>Yarışma Tamamlandı</h2>
-            <div id="final-leaderboard">
-                </div>
+            <div id="final-leaderboard"></div>
             <button class="action-btn" onclick="location.reload()">Yeni Yarışma</button>
         </div>
     </div>
@@ -54,5 +66,4 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="app.js"></script>
 </body>
-
 </html>
