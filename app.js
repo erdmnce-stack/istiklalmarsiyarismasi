@@ -14,7 +14,7 @@ if (!firebase.apps.length) {
 }
 const db = firebase.database();
 
-// 2. SORU BANKASI (20 SORU)
+// 2. SORU BANKASI
 const questions = [
     { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
     { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
@@ -42,6 +42,10 @@ let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
 let timerVal = 20.0;
 let timerInt;
 
+// TAKİP DEĞİŞKENLERİ (Tekrarı önlemek için)
+let currentStep = "";
+let currentQIdx = -1;
+
 // GİRİŞ
 window.joinQuiz = function() {
     my.name = document.getElementById('userName').value;
@@ -65,21 +69,29 @@ window.joinQuiz = function() {
 }
 
 function listen() {
+    // 1. Katılımcı listesi (Bu sadece lobi için)
     db.ref('rooms/' + my.room + '/users').on('value', snap => {
         const list = document.getElementById('player-list');
         list.innerHTML = "";
         snap.forEach(u => { list.innerHTML += `<li>${u.key}</li>`; });
     });
 
+    // 2. ANA OYUN KONTROLÜ (Sadece Sunucu Değişikliklerini Dinle)
     db.ref('rooms/' + my.room).on('value', snap => {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
-        
+
+        // EĞER SORU VEYA ADIM DEĞİŞMEMİŞSE HİÇBİR ŞEY YAPMA (Kritik nokta burası)
+        if (data.step === currentStep && data.currentQ === currentQIdx) return;
+
+        currentStep = data.step;
+        currentQIdx = data.currentQ;
+
         document.getElementById('waiting-view').style.display = 'none';
         document.getElementById('quiz-view').style.display = 'block';
         
-        if(data.currentQ >= questions.length) return showFinal();
-        syncUI(data.step, data.currentQ);
+        if(currentQIdx >= questions.length) return showFinal();
+        syncUI(currentStep, currentQIdx);
     });
 }
 
@@ -91,7 +103,7 @@ function syncUI(step, qIdx) {
 
 function renderQuestion(idx) {
     clearInterval(timerInt);
-    my.selected = -1; // Seçim kilidini sıfırla
+    my.selected = -1; 
     timerVal = 20.0;
     
     document.getElementById('question-content').style.display = 'block';
@@ -108,7 +120,6 @@ function renderQuestion(idx) {
         btn.id = 'btn-' + i;
         btn.innerText = opt;
         
-        // Yarışmacı ise tıklama özelliğini ekle
         if(my.role === 'competitor') {
             btn.addEventListener('click', function() {
                 handleSelection(i, idx);
@@ -140,29 +151,24 @@ function startTimer() {
     }, 100);
 }
 
-// YARIŞMACI SEÇİM YAPTIĞINDA
 function handleSelection(idx, qIdx) {
-    // Zaten seçilmişse veya süre bittiyse işlem yapma
     if(my.selected !== -1 || timerVal <= 0) return;
     
     my.selected = idx;
-    clearInterval(timerInt); // SÜREYİ DURDUR (Sıfırlanmaz, o anda kalır)
+    clearInterval(timerInt); // Yarışmacı için süreyi durdur
     
-    // Seçilen butonu turuncu yap
     document.getElementById('btn-' + idx).classList.add('selected-orange');
     
-    // Diğer butonları kapat
     document.querySelectorAll('.option-btn').forEach(btn => {
         btn.disabled = true;
     });
 
-    // Puanlama
     const isCorrect = idx === questions[qIdx].c;
     const timeSpent = isCorrect ? (20 - parseFloat(timerVal)).toFixed(2) : 20.00;
     if(isCorrect) my.score += 5;
     my.time += parseFloat(timeSpent);
 
-    // Veritabanına gönder
+    // Veritabanına yaz (Puan tablosu için)
     db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
         score: my.score, 
         time: my.time,
