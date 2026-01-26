@@ -43,3 +43,46 @@ body {
 
 #timer { font-size: 4rem; color: #f1c40f; font-weight: bold; font-family: monospace; }
 .lobby-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; list-style: none; text-align: left; }
+/* Kurallar Bölümü */
+.rules-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(241, 196, 15, 0.5);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.rules-box h3 {
+    color: #f1c40f;
+    text-align: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 5px;
+}
+
+.rules-box ul {
+    list-style: none;
+}
+
+.rules-box li {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+/* Katılımcı Kutusu ve Kaydırma (Scroll) Özelliği */
+.lobby-box {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 15px;
+    max-height: 200px; /* Liste çok uzarsa sayfa kaymasın, kutu içinde kalsın */
+    overflow-y: auto;
+}
+
+.lobby-list li {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    list-style: none;
+    text-align: left;
+}
