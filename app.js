@@ -151,7 +151,7 @@ function handleChoice(idx, qIdx) {
     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
     const isCorrect = idx === questions[qIdx].c;
-    const timeSpent =  (20 - parseFloat(timerVal)) ;
+    const timeSpent = 20 - parseFloat(timerVal); 
     if(isCorrect) my.score += 5;
     my.time += parseFloat(timeSpent);
 
@@ -240,4 +240,5 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
+
 
