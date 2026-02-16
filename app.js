@@ -14,11 +14,11 @@ const db = firebase.database();
 
 // 2. 20 SORULUK BANKA
 const questions = [
+    { q: "Mehmet Akif’in ilk şiiri hangi dergide yayınlandı?", a: ["Darülbedayi", "Şiir Mecmuası", "Hazine-i Fünun", "Darülfünun"], c: 2 },   
     { q: "Babasının Mehmet Akif Ersoy’a taktığı isim nedir?", a: ["Ragıyp", "Rakıf", "Ragif", "Refik"], c: 2 },
     { q: "Mehmet Akif’in bildiği diller hangileridir?", a: ["Türkçe, Arapça, Farsça, Fransızca", "Türkçe, Arapça, İngilizce, Rusça", "Türkçe, Almanca, Arapça, İtalyanca", "Türkçe, Fransızca, Almanca, Arapça"], c: 0 },
     { q: "Akif’in okulunu okuduğu meslek hangisidir?", a: ["Öğretmenlik", "Doktorluk", "Katiplik", "Baytarlık"], c: 3 },
     { q: "Akif’in memuriyet hayatını geçirdiği yerler hangileridir?", a: ["Anadolu, Arabistan, Fransa", "Rumeli, Anadolu, Arabistan", "Anadolu, Cezayir, Fas", "Fransa, Anadolu, Mısır"], c: 1 },
-    { q: "Mehmet Akif’in ilk şiiri hangi dergide yayınlandı?", a: ["Darülbedayi", "Şiir Mecmuası", "Hazine-i Fünun", "Darülfünun"], c: 2 },
     { q: "Mehmet Akif, batı toplumlarından özellikle nelerin alınması gerektiğini ifade etmiştir?", a: ["Bilim ve fen", "Bilim ve tıp", "Sanayi ve bilim", "Sanat ve Bilim"], c: 3 },
     { q: "Mehmet Akif 1913 yılında iki aylık bir seyahatle hangi ülkeye gitmiştir?", a: ["Cezayir", "Bosna Hersek", "Suriye", "Mısır"], c: 3 },
     { q: "«Ayrılık hissi nasıl girdi sizin beyninize? / Fikr-i Kavmiyeti şeytan mı sokan zihninize» Akif yukarıdaki şiiriyle neye karşı çıkmaya çalışmıştır?", a: ["Fen Bilimlerinden uzaklaşılması", "Geleneklere Önem verilmeyişi", "Milliyetçilik hareketleri", "Parlamento Sistemi"], c: 2 },
@@ -240,6 +240,7 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
+
 
 
 
