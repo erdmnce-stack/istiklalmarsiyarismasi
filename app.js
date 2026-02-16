@@ -14,26 +14,26 @@ const db = firebase.database();
 
 // 2. 20 SORULUK BANKA
 const questions = [
-    { q: "İstiklal Marşı hangi tarihte kabul edilmiştir?", a: ["12 Mart 1921", "29 Ekim 1923", "23 Nisan 1920", "30 Ağustos 1922"], c: 0 },
-    { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı nerede yazmıştır?", a: ["Ankara Palas", "Taceddin Dergâhı", "Çankaya Köşkü", "Meclis Binası"], c: 1 },
-    { q: "İstiklal Marşı hangi ordumuza ithaf edilmiştir?", a: ["Jandarma Kuvvetleri", "Deniz Kuvvetleri", "Kahraman Türk Ordusu", "Kuvayı Milliye"], c: 2 },
-    { q: "İstiklal Marşı'nın bestecisi kimdir?", a: ["Mehmet Âkif Ersoy", "Şevki Güngör", "Osman Zeki Üngör", "Cemal Reşit Rey"], c: 2 },
-    { q: "Mehmet Âkif Ersoy ödül olarak verilen parayı nereye bağışlamıştır?", a: ["Kızılay", "Darülmesai", "Çocuk Esirgeme Kurumu", "Türk Hava Kurumu"], c: 1 },
-    { q: "İstiklal Marşı toplam kaç kıtadan oluşmaktadır?", a: ["8", "9", "10", "12"], c: 2 },
-    { q: "Mehmet Âkif Ersoy'un şiirlerini topladığı eserin adı nedir?", a: ["Safahat", "Çile", "Han-ı Yağma", "Kendi Gök Kubbemiz"], c: 0 },
-    { q: "İstiklal Marşı yarışmasına toplam kaç şiir katılmıştır?", a: ["524", "724", "100", "124"], c: 1 },
-    { q: "İstiklal Marşı'nın ilk iki kıtası hangi ölçü ile yazılmıştır?", a: ["Hece Ölçüsü", "Serbest Ölçü", "Aruz Ölçüsü", "Mani Tipi"], c: 2 },
-    { q: "İstiklal Marşı mecliste ilk kez kim tarafından okunmuştur?", a: ["Mustafa Kemal Atatürk", "Hamdullah Suphi Tanrıöver", "İsmet İnönü", "Kazım Karabekir"], c: 1 },
-    { q: "Mehmet Âkif Ersoy aslen nerelidir (Babası)?", a: ["İstanbul", "Ankara", "Arnavutluk (İpek)", "Burdur"], c: 2 },
-    { q: "Mehmet Âkif Ersoy'un asıl mesleği nedir?", a: ["Öğretmen", "Asker", "Veteriner Hekim", "Mühendis"], c: 2 },
-    { q: "İstiklal Marşı'nın kabul edildiği dönemde Maarif Vekili kimdir?", a: ["Hamdullah Suphi Tanrıöver", "Reşit Galip", "Hasan Ali Yücel", "Tevfik İleri"], c: 0 },
-    { q: "Mehmet Âkif Ersoy hangi ilin milletvekilliğini yapmıştır?", a: ["İstanbul", "Ankara", "Burdur", "Çanakkale"], c: 2 },
-    { q: "Korkma, sönmez bu şafaklarda yüzen al sancak; / Sönmeden yurdumun üstünde tüten en son ...?", a: ["Ocak", "Bayrak", "Yıldız", "Şafak"], c: 0 },
-    { q: "Mehmet Âkif Ersoy ne zaman vefat etmiştir?", a: ["27 Aralık 1936", "10 Kasım 1938", "12 Mart 1921", "29 Ekim 1923"], c: 0 },
-    { q: "Mehmet Âkif, Safahat'ın hangi bölümünde Çanakkale şehitlerine yer vermiştir?", a: ["Süleymaniye Kürsüsünde", "Asım", "Hakkın Sesleri", "Hatıralar"], c: 1 },
-    { q: "İstiklal Marşı ilk olarak hangi gazetede yayınlanmıştır?", a: ["Hâkimiyet-i Milliye", "Açıksöz", "İrade-i Milliye", "Vakit"], c: 1 },
-    { q: "Aşağıdakilerden hangisi Safahat'ın bölümlerinden biri değildir?", a: ["Fatih Kürsüsünde", "Gölgeler", "Çile", "Süleymaniye Kürsüsünde"], c: 2 },
-    { q: "Mehmet Âkif Ersoy, İstiklal Marşı'nı neden Safahat'a almamıştır?", a: ["Unuttuğu için", "Milletin eseri olduğu için", "Şiiri beğenmediği için", "Sığmadığı için"], c: 1 }
+    { q: "Babasının Mehmet Akif Ersoy’a taktığı isim nedir?", a: ["Ragıyp", "Rakıf", "Ragif", "Refik"], c: 2 },
+    { q: "Mehmet Akif’in bildiği diller hangileridir?", a: ["Türkçe, Arapça, Farsça, Fransızca", "Türkçe, Arapça, İngilizce, Rusça", "Türkçe, Almanca, Arapça, İtalyanca", "Türkçe, Fransızca, Almanca, Arapça"], c: 0 },
+    { q: "Akif’in okulunu okuduğu meslek hangisidir?", a: ["Öğretmenlik", "Doktorluk", "Katiplik", "Baytarlık"], c: 3 },
+    { q: "Akif’in memuriyet hayatını geçirdiği yerler hangileridir?", a: ["Anadolu, Arabistan, Fransa", "Rumeli, Anadolu, Arabistan", "Anadolu, Cezayir, Fas", "Fransa, Anadolu, Mısır"], c: 1 },
+    { q: "Mehmet Akif’in ilk şiiri hangi dergide yayınlandı?", a: ["Darülbedayi", "Şiir Mecmuası", "Hazine-i Fünun", "Darülfünun"], c: 2 },
+    { q: "Mehmet Akif, batı toplumlarından özellikle nelerin alınması gerektiğini ifade etmiştir?", a: ["Bilim ve fen", "Bilim ve tıp", "Sanayi ve bilim", "Sanat ve Bilim"], c: 3 },
+    { q: "Mehmet Akif 1913 yılında iki aylık bir seyahatle hangi ülkeye gitmiştir?", a: ["Cezayir", "Bosna Hersek", "Suriye", "Mısır"], c: 3 },
+    { q: "«Ayrılık hissi nasıl girdi sizin beyninize? / Fikr-i Kavmiyeti şeytan mı sokan zihninize» Akif yukarıdaki şiiriyle neye karşı çıkmaya çalışmıştır?", a: ["Fen Bilimlerinden uzaklaşılması", "Geleneklere Önem verilmeyişi", "Milliyetçilik hareketleri", "Parlamento Sistemi"], c: 2 },
+    { q: "1920 yılında Akif, İstiklal harbini desteklediği için görevine son verildiği konuşmasını hangi ilde yapmıştır?", a: ["Isparta", "Balıkesir", "Sivas", "Erzurum"], c: 1 },
+    { q: "Mehmet Akif’in İstiklal harbini desteklediği yazılar kaleme aldığı Kastamonu’da çıkarılan derginin adı nedir?", a: ["Sebilürreşad", "Sırat-ı Müstakim", "Hazine-i Fünun", "Mecmua-ı Havadis"], c: 0 },
+    { q: "Mehmet Akif hangi ilin milletvekili seçilerek meclise girmiştir?", a: ["Balıkesir", "Kastamonu", "Burdur", "Isparta"], c: 2 },
+    { q: "Akif’in yazdığı şiirleri bir araya getirdiği kitabının ismi nedir?", a: ["Akifname", "Asım’ın nesli", "Mesnevi", "Safahat"], c: 3 },
+    { q: "Milli marşımızın belirlenmesi için yapılan yarışmaya kaç şiir katılmıştır?", a: ["743", "724", "732", "721"], c: 1 },
+    { q: "Mehmet Akif’in yaşadığı yıllar arası aşağıdakilerden hangisidir?", a: ["1881 – 1938", "1873 – 1936", "1888 – 1946", "1866 - 1940"], c: 1 },
+    { q: "Mehmet Akif’in şiirlerinde benimsediği tarz hangisidir?", a: ["Gerçekçi", "Hayalperest", "Sanatı Öne çıkaran", "Kendini Yücelten"], c: 0 },
+    { q: "İstiklal Marşı’nın mecliste kabul edildiği tarih hangisidir?", a: ["12 Mart 1920", "12 Mart 1922", "12 Mart 1921", "23 Nisan 1920"], c: 2 },
+    { q: "Milli Marş’ı seçmek için yapılan yarışmada Akif’in de sıcak bakmadığı para ödülünün miktarı nedir?", a: ["1000 lira", "5000 lira", "50 lira", "500 Lira"], c: 3 },
+    { q: "Akif, 1911’de Safahat isimli kitabını yayımladığında kaç yaşındaydı?", a: ["32", "42", "38", "35"], c: 2 },
+    { q: "Mehmet Akif Ersoy’un mezarı nerededir?", a: ["İstanbul", "Burdur", "Çanakkale", "Ankara"], c: 0 },
+    { q: "Akif’in başarılı olduğu spor dallarından biri hangisidir?", a: ["Futbol", "Güreş", "Halter", "Basketbol"], c: 1 },
 ];
 
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
@@ -240,3 +240,4 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
+
