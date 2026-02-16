@@ -7,22 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
- <div id="login-view">
-            <div style="margin-bottom: 20px;">
-                <h1 style="margin: 0; font-size: clamp(24px, 6vw, 48px); letter-spacing: 2px; color: #f1c40f;">
-                    KORKMA!
-                </h1>
-                <h2 style="margin: 5px 0 0 0; font-size: clamp(16px, 4vw, 32px); font-weight: 300; opacity: 0.9;">
-                    GENÇLİĞİN RUHU BURADA.
-                </h2>
-            </div>
-            <p> Bilgi Yarışması</p>
-            <div class="input-group">
-                <input type="text" id="userName" placeholder="Adınız Soyadınız">
-                <input type="text" id="roomCode" placeholder="Yarışma Kodunu Giriniz">
-                <select id="userRole">
-                    <option value="competitor">Yarışmacı Olarak Katıl</option>
-                    <option value="host">Sunucu Olarak Katıl</option>
+
+        <div id="login-view">
+            <h1 style="white-space: nowrap; font-size: clamp(10px, 4vw, 32px); text-align: center; margin: 15px 0;">KORKMA! GENÇLİĞİN RUHU BURADA.</h1>
+             <p> Bilgi Yarışması</p>
+            <div class="input-group">
+                <input type="text" id="userName" placeholder="Adınız Soyadınız">
+                <input type="text" id="roomCode" placeholder="Yarışma Kodunu Giriniz">
+                <select id="userRole">
+                    <option value="competitor">Yarışmacı Olarak Katıl</option>
+                    <option value="host">Sunucu Olarak Katıl</option>
+                </select>
+            </div>
+            <button class="action-btn" onclick="joinQuiz()">Yarışmaya Giriş Yap</button>
+        </div>
                 </select>
             </div>
             <button class="action-btn" onclick="joinQuiz()">Yarışmaya Giriş Yap</button>
@@ -79,6 +77,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
