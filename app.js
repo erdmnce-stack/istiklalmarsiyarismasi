@@ -55,7 +55,6 @@ window.joinQuiz = function() {
 
     if(my.role === 'host') {
         document.getElementById('host-controls').style.display = 'block';
-        // DÜZELTME: update kullanarak kullanıcı listesini silmiyoruz
         db.ref('rooms/' + my.room).update({ currentQ: -1, step: 'lobby' });
     } else {
         db.ref('rooms/' + my.room + '/users/' + my.name).set({ score: 0, time: 0 });
@@ -76,15 +75,14 @@ function listen() {
         const data = snap.val();
         if(!data || data.currentQ < 0) return;
 
-        // Puan durumu adımındaysak listeyi her zaman güncelle (yeni cevaplar gelebilir)
+        // GÜNCELLEME: renderScore'a data.currentQ parametresini ekledik
         if(data.step === 'score') {
-            renderScore(data.users);
+            renderScore(data.users, data.currentQ);
             lastStep = 'score';
             lastQIdx = data.currentQ;
             return;
         }
 
-        // Diğer adımlar için tekrar yüklemeyi engelle
         if (data.step === lastStep && data.currentQ === lastQIdx) return;
         lastStep = data.step;
         lastQIdx = data.currentQ;
@@ -147,7 +145,7 @@ function startTimer() {
 function handleChoice(idx, qIdx) {
     if(my.selected !== -1 || timerVal <= 0) return;
     my.selected = idx;
-    clearInterval(timerInt); // Yarışmacı için süreyi durdur
+    clearInterval(timerInt);
     
     document.getElementById('btn-' + idx).classList.add('selected-orange');
     document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
@@ -170,11 +168,16 @@ function showReveal(qIdx) {
     if(my.role === 'host') document.getElementById('main-action-btn').innerText = "Puan Durumu";
 }
 
-function renderScore(usersData) {
+// GÜNCELLEME: currentQIdx parametresini ve ikon mantığını ekledik
+function renderScore(usersData, currentQIdx) {
     document.getElementById('question-content').style.display = 'none';
     document.getElementById('score-content').style.display = 'block';
     
     if(!usersData) return;
+    
+    // Doğru cevap şıkkı (0, 1, 2, 3)
+    const correctAns = (questions[currentQIdx]) ? questions[currentQIdx].c : -1;
+
     const u = [];
     Object.keys(usersData).forEach(name => {
         u.push({name: name, ...usersData[name]});
@@ -183,11 +186,28 @@ function renderScore(usersData) {
     // Sıralama: Önce Puan (Büyük), sonra Süre (Küçük)
     u.sort((a,b) => b.score - a.score || a.time - b.time);
 
-    document.getElementById('score-list').innerHTML = u.map((x,i) => `
-        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
-            <span>${i+1}. ${x.name}</span>
-            <span>${x.score} Puan | ${x.time.toFixed(2)} sn</span>
-        </div>`).join("");
+    document.getElementById('score-list').innerHTML = u.map((x,i) => {
+        // İKON BELİRLEME: Kullanıcının seçimi doğru cevapla aynı mı?
+        let statusIcon;
+        if (x.choice === correctAns) {
+            statusIcon = '<span style="color: #2ecc71; margin-right:8px; font-size:1.2em;">✅</span>'; // Yeşil Tik
+        } else {
+            statusIcon = '<span style="color: #e74c3c; margin-right:8px; font-size:1.2em;">❌</span>'; // Kırmızı Çarpı
+        }
+
+        return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; align-items:center;">
+                <span style="width:25px; font-weight:bold;">${i+1}.</span>
+                ${statusIcon}
+                <span>${x.name}</span>
+            </div>
+            <div style="text-align:right;">
+                <span style="display:block; font-weight:bold;">${x.score} Puan</span>
+                <span style="font-size:0.85em; opacity:0.8;">${x.time.toFixed(2)} sn</span>
+            </div>
+        </div>`;
+    }).join("");
 
     if(my.role === 'host') {
         document.getElementById('main-action-btn').innerText = "Sonraki Soru";
@@ -220,4 +240,3 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
-
