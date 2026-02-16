@@ -26,18 +26,18 @@ const questions = [
     { q: "Mehmet Akif’in İstiklal harbini desteklediği yazılar kaleme aldığı Kastamonu’da çıkarılan derginin adı nedir?", a: ["Sebilürreşad", "Sırat-ı Müstakim", "Hazine-i Fünun", "Mecmua-ı Havadis"], c: 0 },
     { q: "Mehmet Akif hangi ilin milletvekili seçilerek meclise girmiştir?", a: ["Balıkesir", "Kastamonu", "Burdur", "Isparta"], c: 2 },
     { q: "Akif’in yazdığı şiirleri bir araya getirdiği kitabının ismi nedir?", a: ["Akifname", "Asım’ın nesli", "Mesnevi", "Safahat"], c: 3 },
-    { q: "Milli marşımızın belirlenmesi için yapılan yarışmaya kaç şiir katılmıştır?", a: ["743", "724", "732", "721"], c: 1 },
     { q: "Mehmet Akif’in yaşadığı yıllar arası aşağıdakilerden hangisidir?", a: ["1881 – 1938", "1873 – 1936", "1888 – 1946", "1866 - 1940"], c: 1 },
     { q: "Mehmet Akif’in şiirlerinde benimsediği tarz hangisidir?", a: ["Gerçekçi", "Hayalperest", "Sanatı Öne çıkaran", "Kendini Yücelten"], c: 0 },
     { q: "İstiklal Marşı’nın mecliste kabul edildiği tarih hangisidir?", a: ["12 Mart 1920", "12 Mart 1922", "12 Mart 1921", "23 Nisan 1920"], c: 2 },
     { q: "Milli Marş’ı seçmek için yapılan yarışmada Akif’in de sıcak bakmadığı para ödülünün miktarı nedir?", a: ["1000 lira", "5000 lira", "50 lira", "500 Lira"], c: 3 },
-    { q: "Akif, 1911’de Safahat isimli kitabını yayımladığında kaç yaşındaydı?", a: ["32", "42", "38", "35"], c: 2 },
-    { q: "Mehmet Akif Ersoy’un mezarı nerededir?", a: ["İstanbul", "Burdur", "Çanakkale", "Ankara"], c: 0 },
-    { q: "Akif’in başarılı olduğu spor dallarından biri hangisidir?", a: ["Futbol", "Güreş", "Halter", "Basketbol"], c: 1 },
+    { q: "Akif’in çocukluk dönemi mizacı (karakter yapısı) nasıldır?", a: ["Ele avuca sığmayan", "Her zaman ciddiyet sahibi", "Sürekli ders çalışan", "Her söylenileni yapan"], c: 0 },
+    { q: "Akif İstiklal marşı için verilmek istenen ödülü nereye bağışlamıştır?", a: ["Darülazece", "Hilal-i Ahmer", "Hazine-i Osmaniye", "Vakıflar Müdürlüğü"], c: 1 },
+    { q: "Mehmet Akif şiirlerinde daha çok hangi ölçüyü kullanmıştır?", a: ["Hece ölçüsü", "Serbest ölçü", "Beyit", "Aruz Ölçüsü"], c: 3 },
+    { q: "Mehmet Akif Ersoy’un babası Tahir Efendi’nin kökü nereden gelmektedir?", a: ["Buhara", "Arnavutluk", "İstanbul", "Mısır"], c: 1 },
 ];
 
 let my = { name: "", role: "", room: "", score: 0, time: 0, selected: -1 };
-let timerVal = 20.0;
+let timerVal = 30.0;
 let timerInt = null;
 let lastStep = "";
 let lastQIdx = -1;
@@ -240,4 +240,5 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
+
 
