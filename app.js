@@ -3,7 +3,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyBfMm6VcVQ3GoqqsNKbHM2PN1akJFzki_s",
     authDomain: "istiklalmarsiyarismasi.firebaseapp.com",
     databaseURL: "https://istiklalmarsiyarismasi-default-rtdb.europe-west1.firebasedatabase.app/",
-    projectId: "istiklalmarsiyarismasi",
+    projectId: "istiklalmarsiyarismasit
     storageBucket: "istiklalmarsiyarismasi.firebasestorage.app",
     messagingSenderId: "78708182382",
     appId: "1:78708182382:web:efe75268cbdc77c682057f"
@@ -134,9 +134,26 @@ function startTimer() {
     timerInt = setInterval(() => {
         timerVal = (parseFloat(timerVal) - 0.1).toFixed(1);
         document.getElementById('timer').innerText = timerVal;
+        
+        // SÜRE BİTTİĞİNDE YAPILACAKLAR
         if(timerVal <= 0) {
             clearInterval(timerInt);
             document.getElementById('timer').innerText = "0.0";
+            
+            // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+            // Eğer kullanıcı yarışmacıysa VE hala seçim yapmadıysa (-1 ise)
+            if(my.role === 'competitor' && my.selected === -1) {
+                my.time += 20; // Toplam süreye 20 sn ekle
+                
+                // Veritabanına "Boş Bıraktı" (-1) olarak kaydet
+                db.ref('rooms/' + my.room + '/users/' + my.name).update({ 
+                    score: my.score, 
+                    time: my.time,
+                    choice: -1 
+                });
+            }
+            // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
             if(my.role === 'host') document.getElementById('main-action-btn').disabled = false;
         }
     }, 100);
@@ -240,6 +257,7 @@ function showFinal(usersData) {
             <span>Puan: ${x.score} | Toplam Süre: ${x.time.toFixed(2)} sn</span>
         </div>`).join("");
 }
+
 
 
 
